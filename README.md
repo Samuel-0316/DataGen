@@ -1,1 +1,1 @@
-hii im yash
+    "DataGen", a user friendly web interface developed with the main intention of developing a medium to output ready to use(train_a_model) datasets with custom file inputs with additional functionality that of web-crawling with dataset generation.The dataset being that of combination of possible high accuracy, filtered question and answers with respect to the custom website or a file uploaded.
