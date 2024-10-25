@@ -3,6 +3,5 @@ flask_cors == 5.0.0
 PyPDF2 == 3.0.1
 docx == 0.2.4
 os
-#
-requests==2.31.0
-beautifulsoup4==4.12.2
+requests == 2.31.0
+beautifulsoup4 == 4.12.2
