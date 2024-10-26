@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Responsive Mac Terminal Design</title>
+  <!-- Tailwind CSS CDN -->
+  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+  <style>
+    /* Custom scrollbar styling */
+    ::-webkit-scrollbar {
+      width: 8px;
+    }
+    ::-webkit-scrollbar-thumb {
+      background-color: #6366f1;
+      border-radius: 4px;
+    }
+  </style>
+</head>
+<body class="bg-gray-900 text-white font-mono min-h-screen flex items-center justify-center p-4 sm:p-6">
+
+  <!-- Terminal Container -->
+  <div class="w-full max-w-lg sm:max-w-xl md:max-w-2xl lg:max-w-3xl bg-gray-800 rounded-lg shadow-lg">
+    
+    <!-- Terminal Header -->
+    <div class="flex items-center justify-between bg-gray-700 p-3 rounded-t-lg">
+      <!-- Traffic Lights -->
+      <div class="flex items-center space-x-2">
+        <span class="w-3 h-3 bg-red-500 rounded-full"></span>
+        <span class="w-3 h-3 bg-yellow-500 rounded-full"></span>
+        <span class="w-3 h-3 bg-green-500 rounded-full"></span>
+      </div>
+      <!-- Terminal Title -->
+      <p class="text-sm text-gray-400">Mac Terminal</p>
+      <div></div> <!-- Empty div to center the title -->
+    </div>
+    
+    <!-- Terminal Body -->
+    <div class="p-4 sm:p-6 overflow-y-auto h-64 sm:h-80 md:h-96 lg:h-[28rem] text-gray-200">
+      <!-- Example Terminal Prompt -->
+      <div>
+        <span class="text-green-400">datagen@mac:~$</span> <span class="text-pink-400">ls</span>
+        <p class="text-gray-400 ml-4">
+          Desktop <span class="text-blue-400">Documents</span> Downloads <span class="text-blue-400">Projects</span>
+        </p>
+      </div>
+      <div class="mt-4">
+        <span class="text-green-400">datagen@mac:~$</span> <span class="text-pink-400">cd Projects</span>
+      </div>
+      <div class="mt-4">
+        <span class="text-green-400">datagen@mac:~/Projects$</span> <span class="text-pink-400">ls</span>
+        <p class="text-gray-400 ml-4">
+          website <span class="text-blue-400">app</span> Faizi <span class="text-blue-400">scripts</span>
+        </p>
+      </div>
+      <div class="mt-4">
+        <span class="text-green-400">datagen@mac:~/Projects$</span> <span class="text-pink-400">npm start</span>
+        <p class="text-blue-400 mt-2">Starting development server...</p>
+        <p class="text-green-400">Server running at <span class="text-blue-500 underline">http://localhost:3000</span></p>
+      </div>
+    </div>
+  </div>
+
+</body>
+</html>
