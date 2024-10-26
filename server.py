@@ -13,6 +13,7 @@ app = Flask(__name__, static_folder="static", template_folder="templates")  # Sp
 CORS(app)
 
 Global_data = ""
+global_chunks = []
 
 # PDF, DOCX, and TXT File Extraction Functions
 def extract_text_from_pdf(file):
@@ -76,9 +77,11 @@ def upload_file():
     doc = nlp(Global_data)
     sentences = [sent.text for sent in doc.sents]
     chunk_size = 4
-    chunks = [''.join(sentences[i:i+chunk_size]) for i in range(0,len(sentences),chunk_size)]
-    for i,chunk in enumerate(chunks):
-        print(f"Chunk{i+1}:\n{chunk}\n")
+    global_chunks = [''.join(sentences[i:i+chunk_size]) for i in range(0,len(sentences),chunk_size)]
+    # print(chunks)
+
+    # for i,chunk in enumerate(chunks):
+    #     print(f"Chunk{i+1}:\n{chunk}\n")
 
     return jsonify({"text": Global_data}), 200
 # -----------------------------------------------------------------------------------------------
@@ -87,6 +90,7 @@ def extract_data_from_webpage(url):
     try:
         response = requests.get(url, timeout=5)
         response.raise_for_status()
+
         soup = BeautifulSoup(response.text, 'html.parser')
         text_content = soup.get_text(separator=' ', strip=True)
 
@@ -141,9 +145,9 @@ def extract_webpage():
     doc = nlp(Global_data)
     sentences = [sent.text for sent in doc.sents]
     chunk_size = 4
-    chunks = [''.join(sentences[i:i+chunk_size]) for i in range(0,len(sentences),chunk_size)]
-    for i,chunk in enumerate(chunks):
-        print(f"Chunk{i+1}:\n{chunk}\n")
+    global_chunks = [''.join(sentences[i:i+chunk_size]) for i in range(0,len(sentences),chunk_size)]
+    # for i,chunk in enumerate(chunks):
+    #     print(f"Chunk{i+1}:\n{chunk}\n")
 
     return jsonify({"text_content": Global_data, "links": links}), 200
 
@@ -162,9 +166,9 @@ def crawl_webpage():
     doc = nlp(Global_data)
     sentences = [sent.text for sent in doc.sents]
     chunk_size = 4
-    chunks = [''.join(sentences[i:i+chunk_size]) for i in range(0,len(sentences),chunk_size)]
-    for i,chunk in enumerate(chunks):
-        print(f"Chunk{i+1}:\n{chunk}\n")
+    global_chunks = [''.join(sentences[i:i+chunk_size]) for i in range(0,len(sentences),chunk_size)]
+    # for i,chunk in enumerate(chunks):
+    #     print(f"Chunk{i+1}:\n{chunk}\n")
 
     return jsonify({"crawled_content": Global_data}), 200
 
