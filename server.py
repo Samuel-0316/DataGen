@@ -6,9 +6,13 @@ import os
 import requests
 from bs4 import BeautifulSoup
 from urllib.parse import urljoin, urlparse
+import spacy
+nlp = spacy.load("en_core_web_sm")
 
 app = Flask(__name__, static_folder="static", template_folder="templates")  # Specify static and template folders
 CORS(app)
+
+Global_data = ""
 
 # PDF, DOCX, and TXT File Extraction Functions
 def extract_text_from_pdf(file):
@@ -40,6 +44,11 @@ def extract_text_from_txt(file):
 def index():
     return render_template('index.html')  # Main HTML page for the frontend
 
+@app.route('/terminal')
+def terminal():
+    return render_template('terminal.html')  # Serve the terminal.html page
+
+
 # Endpoint for PDF, DOCX, and TXT Upload
 @app.route('/upload_file', methods=['POST'])
 def upload_file():
@@ -53,21 +62,25 @@ def upload_file():
     file_extension = os.path.splitext(file.filename)[1].lower()
 
     if file_extension == '.pdf':
-        model_text = extract_text_from_pdf(file)
+        Global_data = extract_text_from_pdf(file)
     elif file_extension == '.docx':
-        model_text = extract_text_from_docx(file)
+        Global_data = extract_text_from_docx(file)
     elif file_extension == '.txt':
-        model_text = extract_text_from_txt(file)
+        Global_data = extract_text_from_txt(file)
     else:
         return jsonify({"error": "Unsupported file format"}), 400
 
-    if model_text.startswith("Error"):
-        return jsonify({"error": model_text}), 500
+    if Global_data.startswith("Error"):
+        return jsonify({"error": Global_data}), 500
     
-    print(model_text)
-    print("\n")
+    doc = nlp(Global_data)
+    sentences = [sent.text for sent in doc.sents]
+    chunk_size = 4
+    chunks = [''.join(sentences[i:i+chunk_size]) for i in range(0,len(sentences),chunk_size)]
+    for i,chunk in enumerate(chunks):
+        print(f"Chunk{i+1}:\n{chunk}\n")
 
-    return jsonify({"text": model_text}), 200
+    return jsonify({"text": Global_data}), 200
 # -----------------------------------------------------------------------------------------------
 # Webpage Extraction and Crawling Functions
 def extract_data_from_webpage(url):
@@ -121,30 +134,39 @@ def extract_webpage():
     if not url or not is_valid_url(url):
         return jsonify({"error": "Valid URL is required"}), 400
 
-    text_content, links = extract_data_from_webpage(url)
-    if text_content is None:
+    Global_data, links = extract_data_from_webpage(url)
+    if Global_data is None:
         return jsonify({"error": "Unable to retrieve webpage content"}), 500
     
-    print(text_content)
-    print("\n")
+    doc = nlp(Global_data)
+    sentences = [sent.text for sent in doc.sents]
+    chunk_size = 4
+    chunks = [''.join(sentences[i:i+chunk_size]) for i in range(0,len(sentences),chunk_size)]
+    for i,chunk in enumerate(chunks):
+        print(f"Chunk{i+1}:\n{chunk}\n")
 
-    return jsonify({"text_content": text_content, "links": links}), 200
+    return jsonify({"text_content": Global_data, "links": links}), 200
+
 
 @app.route('/crawl_webpage', methods=['POST'])
 def crawl_webpage():
     data = request.json
     start_url = data.get('url')
-    max_pages = data.get('max_pages', 50)
+    max_pages = int(data.get('max_pages', 50))  # Ensure max_pages is an integer
 
     if not start_url or not is_valid_url(start_url):
         return jsonify({"error": "Valid URL is required"}), 400
 
-    text_content = crawl_website(start_url, max_pages)
+    Global_data = crawl_website(start_url, max_pages)
+    
+    doc = nlp(Global_data)
+    sentences = [sent.text for sent in doc.sents]
+    chunk_size = 4
+    chunks = [''.join(sentences[i:i+chunk_size]) for i in range(0,len(sentences),chunk_size)]
+    for i,chunk in enumerate(chunks):
+        print(f"Chunk{i+1}:\n{chunk}\n")
 
-    print(text_content)
-    print("\n")
-
-    return jsonify({"content": text_content}), 200
+    return jsonify({"crawled_content": Global_data}), 200
 
 # Error handler for 404
 @app.errorhandler(404)
@@ -155,6 +177,7 @@ def page_not_found(e):
 @app.errorhandler(500)
 def internal_server_error(e):
     return jsonify({"error": "Internal server error"}), 500
+
 
 if __name__ == '__main__':
     app.run(host="127.0.0.1", port=5000, debug=True)
