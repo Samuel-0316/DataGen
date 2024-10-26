@@ -5,3 +5,5 @@ docx == 0.2.4
 os
 requests == 2.31.0
 beautifulsoup4 == 4.12.2
+urllib3 == 2.2.3
+spacy == 3.8.2
