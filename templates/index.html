@@ -84,16 +84,31 @@
 
                     <form id="urlForm" action="#" method="POST" class="animate__animated animate__fadeIn">
                         <div class="flex items-center space-x-2">
-                            <input type="text"
-                                class="form-control flex-grow px-4 py-2 border border-gray-300 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all duration-300 ease-in-out shadow-sm text-gray-600"
-                                placeholder="Paste the URL..." id="userInput" style="font-size: 14px; padding: 8px;">
-                            <button type="button" onclick="sendMessage()"
-                                class="btn btn-primary text-white shadow-md w-full py-2 font-semibold rounded-lg transition-all duration-200 transform hover:scale-105"
-                                style="width: 100px; font-size: 14px; padding: 8px; background-color: #245aba; border-color: #245aba;">
-                                Search
-                            </button>
+                          <input type="text"
+                                 class="form-control flex-grow px-4 py-2 border border-gray-300 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all duration-300 ease-in-out shadow-sm text-gray-600"
+                                 placeholder="Paste the URL..." id="userInput" style="font-size: 14px; padding: 8px;" required>
+                          <button type="button" onclick="sendMessage()"
+                                  class="btn btn-primary text-white shadow-md w-full py-2 font-semibold rounded-lg transition-all duration-200 transform hover:scale-105"
+                                  style="width: 100px; font-size: 14px; padding: 8px; background-color: #245aba; border-color: #245aba;">
+                            Search
+                          </button>
                         </div>
-                    </form>
+                        
+                        <!-- New Buttons for "Crawl Webpage" and "Crawl Website" -->
+                        <div id="crawlButtons" class="flex items-center space-x-2 mt-4 hidden">
+                            <button type="button" onclick="crawlWebpage()"
+                                    class="btn btn-secondary text-white shadow-md w-full py-2 font-semibold rounded-lg transition-all duration-200 transform hover:scale-105"
+                                    style="width: 120px; font-size: 14px; padding: 8px; background-color: #bed7fd; border-color: #3b82f6; color: #6ba4f7;">
+                              Crawl Webpage
+                            </button>
+                            <button type="button" onclick="crawlWebsite()"
+                                    class="btn btn-secondary text-white shadow-md w-full py-2 font-semibold rounded-lg transition-all duration-200 transform hover:scale-105"
+                                    style="width: 120px; font-size: 14px; padding: 8px; background-color: #bed7fd; border-color: #3b82f6; color: #6ba4f7;">
+                              Crawl Website
+                            </button>
+                          </div>
+                          
+                      </form>
                 
 
                 <div id="result" class="mt-4 font-bold text-gray-700 animate__animated animate__fadeInUp"></div>
@@ -150,6 +165,28 @@
             navbarNav.classList.toggle("show");
           });
         });
+
+
+        // search button javascript 
+        // Function that executes when "Search" button is clicked
+    function sendMessage() {
+      // Check if the user entered a URL
+      const userInput = document.getElementById("userInput").value;
+      if (userInput) {
+        // Show the crawl buttons after the search
+        document.getElementById("crawlButtons").classList.remove("hidden");
+      }
+    }
+
+    // Placeholder function for "Crawl Webpage" button
+    function crawlWebpage() {
+      alert("Crawl Webpage function triggered!");
+    }
+
+    // Placeholder function for "Crawl Website" button
+    function crawlWebsite() {
+      alert("Crawl Website function triggered!");
+    }
     </script>
 
 </body>
