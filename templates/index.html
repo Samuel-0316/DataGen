@@ -1,6 +1,5 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -52,7 +51,7 @@
 
                     <form id="pdfForm" action="http://127.0.0.1:5000/upload_file" method="POST" enctype="multipart/form-data" class="animate__animated animate__fadeIn">
                         <div class="mb-4 relative group" style="height: 150px;">
-                            <input type="file" id="pdfFile" name="pdf" accept=".pdf,.docx" required
+                            <input type="file" id="pdfFile" name="pdf" accept=".pdf,.docx,.txt" required
                                 class="block w-full border border-gray-300 rounded-lg p-3 mb-4 transition-all duration-300 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 focus:outline-none opacity-0 absolute inset-0 z-10 cursor-pointer"
                                 onchange="displayFileName()" />
                             <label for="pdfFile"
@@ -65,52 +64,62 @@
                                 <span id="fileText" class="absolute bottom-3 text-gray-400 text-sm">Drag & drop .pdf file here</span>
                             </label>
                         </div>
-                        <button type="button" onclick="uploadPDF()"
+                        <button type="button" onclick="uploadPDF();navigateToTerminal()"
                             class="btn btn-primary w-full py-2 font-semibold rounded-lg text-white transition-all duration-200 transform hover:scale-105 shadow-md"
                             style="padding: 10px; font-size: 14px; background-color: #245aba; border-color: #245aba;">
                             Upload PDF
                         </button>
                     </form>
                     <br>
-
-                <!-- Second Form: URL Input and Search -->
-                    <!-- <img src="search.png" alt="search logo">
-                    <h4 class="text-3xl font-bold mb-6 text-center" style="color: #316fd0;">Search by URL</h4> -->
+                    <!-- url inputs from user -->
                     <div class="flex items-center justify-center mb-6 space-x-2">
                         <img src="{{ url_for('static', filename='images/search.png') }}" alt="search logo" class="h-8 w-8">
                         <h4 class="text-2xl font-bold text-center" style="color: #316fd0;">Search by URL</h4>
                     </div>
-                    
-
+                
                     <form id="urlForm" action="#" method="POST" class="animate__animated animate__fadeIn">
                         <div class="flex items-center space-x-2">
-                            <input type="text"
-                                class="form-control flex-grow px-4 py-2 border border-gray-300 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all duration-300 ease-in-out shadow-sm text-gray-600"
-                                placeholder="Paste the URL..." id="userInput" style="font-size: 14px; padding: 8px;">
-                            <button type="button" onclick="sendMessage()"
-                                class="btn btn-primary text-white shadow-md w-full py-2 font-semibold rounded-lg transition-all duration-200 transform hover:scale-105"
-                                style="width: 100px; font-size: 14px; padding: 8px; background-color: #245aba; border-color: #245aba;">
-                                Search
-                            </button>
+                          <input type="text"
+                                 class="form-control flex-grow px-4 py-2 border border-gray-300 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all duration-300 ease-in-out shadow-sm text-gray-600"
+                                 placeholder="Paste the URL..." id="userInput" style="font-size: 14px; padding: 8px;" required>
+                          <button type="button" onclick="hidden_buttons()"
+                                  class="btn btn-primary text-white shadow-md w-full py-2 font-semibold rounded-lg transition-all duration-200 transform hover:scale-105"
+                                  style="width: 100px; font-size: 14px; padding: 8px; background-color: #245aba; border-color: #245aba;">
+                            Search
+                          </button>
                         </div>
-                    </form>
+                        
+                        <!-- New Buttons for "Crawl Webpage" and "Crawl Website" -->
+                        <!-- Crawl Buttons Container -->
+                        <div id="crawlButtons" class="flex flex-col md:flex-row items-center justify-between space-y-2 md:space-y-0 md:space-x-4 mt-4 hidden">
+                        
+                            <!-- Crawl Webpage Button -->
+                            <button type="button" onclick="sendMessage();navigateToTerminal()"
+                                    class="w-full md:w-auto px-6 py-2 font-semibold rounded-lg transition-all duration-200 transform hover:scale-105 text-white shadow-md"
+                                    style="background-color: #6ba4f7; border: 1px solid #3b82f6; font-size: 14px;">
+                            Crawl Webpage
+                            </button>
+                            
+                            <!-- Crawl Website Button with Number Input -->
+                            <div class="flex items-center border border-blue-500 rounded-lg p-1 bg-blue-100 w-full md:w-auto">
+                            <!-- Number Input Field -->
+                            <input type="number" id="numberInput"
+                                    class="flex-grow max-w-[80px] px-3 py-2 text-gray-600 bg-transparent focus:outline-none"
+                                    placeholder="Pages" style="border: none; font-size: 14px;">
+                            
+                            <!-- Crawl Website Button -->
+                            <button type="button" onclick="crawlWebsite();navigateToTerminal()"
+                                    class="px-4 py-2 font-semibold uppercase text-blue-800"
+                                    style="border: none; font-size: 14px;">
+                                Crawl Website
+                            </button>
+                            </div>
+                        </div>
 
-                    <!-- New Buttons for "Crawl Webpage" and "Crawl Website" -->
-                    <div id="crawlButtons" class="flex items-center space-x-2 mt-4 hidden">
-                        <button type="button" onclick="crawlWebpage()"
-                                class="btn btn-secondary text-white shadow-md w-full py-2 font-semibold rounded-lg transition-all duration-200 transform hover:scale-105"
-                                style="width: 120px; font-size: 14px; padding: 8px; background-color: #bed7fd; border-color: #3b82f6; color: #6ba4f7;">
-                          Crawl Webpage
-                        </button>
-                        <button type="button" onclick="crawlWebsite()"
-                                class="btn btn-secondary text-white shadow-md w-full py-2 font-semibold rounded-lg transition-all duration-200 transform hover:scale-105"
-                                style="width: 120px; font-size: 14px; padding: 8px; background-color: #bed7fd; border-color: #3b82f6; color: #6ba4f7;">
-                          Crawl Website
-                        </button>
-                    </div>
-                
-
-                <div id="result" class="mt-4 font-bold text-gray-700 animate__animated animate__fadeInUp"></div>
+                        <div id="result" class="mt-4 font-bold text-gray-700 animate__animated animate__fadeInUp"></div>
+  
+                          </div>
+                      </form>
             </div>
         </div>
     </div>
@@ -149,13 +158,11 @@
                 });
 
                 const result = await response.json();
-                document.getElementById("result").textContent = "File uploaded successfully!";
             } catch (error) {
                 document.getElementById("result").textContent = "An error occurred during upload.";
                 console.error("Upload error:", error);
             }
         }
-
 
         document.addEventListener("DOMContentLoaded", function() {
           const navbarToggler = document.querySelector(".navbar-toggler");
@@ -166,29 +173,67 @@
           });
         });
 
-        // search button javascript 
+        // search button javascript
         // Function that executes when "Search" button is clicked
-    function sendMessage() {
-      // Check if the user entered a URL
-      const userInput = document.getElementById("userInput").value;
-      if (userInput) {
-        // Show the crawl buttons after the search
-        document.getElementById("crawlButtons").classList.remove("hidden");
-      }
-    }
+        function hidden_buttons(){
+            document.getElementById("crawlButtons").classList.remove("hidden");
+        }
 
-    // Placeholder function for "Crawl Webpage" button
-    function crawlWebpage() {
-      alert("Crawl Webpage function triggered!");
-    }
+        async function sendMessage() {
+            const userInput = document.getElementById("userInput").value;
+            const numberInput = document.getElementById("numberInput").value; // Get number input if needed
 
-    // Placeholder function for "Crawl Website" button
-    function crawlWebsite() {
-      alert("Crawl Website function triggered!");
-    }
+            if (userInput) {
+                try {
+                    const response = await fetch("http://127.0.0.1:5000/extract_webpage", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ url: userInput, pages: numberInput || 1 }) // Default to 1 if numberInput is empty
+                    });
+
+                    const result = await response.json();
+                    if (result.error) {
+                        document.getElementById("result").textContent = result.error;
+                    }
+                } 
+                catch (error) {
+                    document.getElementById("result").textContent = "An error occurred while extracting data.";
+                    console.error("Extract error:", error);
+                }
+            }
+        }
+
+        async function crawlWebsite() {
+            const userInput = document.getElementById("userInput").value;
+            const pages = document.getElementById("numberInput").value || 1; // Default to 1 if pages is empty
+
+            if (userInput) {
+                try {
+                    const response = await fetch("http://127.0.0.1:5000/crawl_webpage", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ url: userInput, max_pages: pages })
+                    });
+
+                    const result = await response.json();
+                    if (result.error) {
+                        document.getElementById("result").textContent = result.error;
+                    }
+                } catch (error) {
+                    document.getElementById("result").textContent = "An error occurred during website crawling.";
+                    console.error("Crawl error:", error);
+                }
+            }
+        }
+
+
+        function navigateToTerminal() {
+            window.location.href = "/terminal";  // Redirect to the terminal route
+        }
+
+
 
     </script>
 
 </body>
-
 </html>
