@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Webpage Data Extraction and Crawling</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+        }
+        label, input {
+            display: block;
+            margin-bottom: 10px;
+        }
+        button {
+            margin-top: 10px;
+        }
+        .error {
+            color: red;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>Webpage Data Extraction and Crawling</h1>
+
+    <!-- Section for extracting data from a single webpage -->
+    <div>
+        <h2>Extract Data from a Single Webpage</h2>
+        <label for="extract-url">Enter URL:</label>
+        <input type="text" id="extract-url" placeholder="https://example.com" required>
+        <button onclick="extractWebpageData()">Extract Data</button>
+    </div>
+
+    <!-- Section for crawling a website -->
+    <div>
+        <h2>Crawl a Website</h2>
+        <label for="crawl-url">Enter Start URL:</label>
+        <input type="text" id="crawl-url" placeholder="https://example.com" required>
+        
+        <label for="max-pages">Max Pages to Crawl:</label>
+        <input type="number" id="max-pages" value="10" min="1" max="50" required>
+        
+        <button onclick="crawlWebsite()">Crawl Website</button>
+    </div>
+
+    <script>
+        const extractWebpageData = async () => {
+            const url = document.getElementById('extract-url').value;
+    
+            // Ensure that the URL is provided
+            if (!url) {
+                alert("Please provide a valid URL to extract data.");
+                return;
+            }
+    
+            try {
+                const response = await fetch('http://127.0.0.1:5000/extract_webpage', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ url: url })
+                });
+    
+                if (response.ok) {
+                    alert("Webpage data extracted successfully. Check terminal for details.");
+                } else {
+                    const result = await response.json();
+                    alert(`Error: ${result.error}`);
+                }
+            } catch (error) {
+                alert(`Error: ${error.message}`);
+            }
+        };
+    
+        const crawlWebsite = async () => {
+            const url = document.getElementById('crawl-url').value;
+            const maxPages = parseInt(document.getElementById('max-pages').value);
+    
+            // Ensure that both URL and max pages are provided
+            if (!url) {
+                alert("Please provide a valid start URL for crawling.");
+                return;
+            }
+    
+            if (!maxPages || maxPages <= 0) {
+                alert("Please provide a valid number of pages to crawl.");
+                return;
+            }
+    
+            try {
+                const response = await fetch('http://127.0.0.1:5000/crawl_webpage', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ url: url, max_pages: maxPages })
+                });
+    
+                if (response.ok) {
+                    alert("Website crawling completed. Check terminal for details.");
+                } else {
+                    const result = await response.json();
+                    alert(`Error: ${result.error}`);
+                }
+            } catch (error) {
+                alert(`Error: ${error.message}`);
+            }
+        };
+    </script>    
+
+</body>
+</html>
