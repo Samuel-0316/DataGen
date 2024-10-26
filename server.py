@@ -38,7 +38,7 @@ def extract_text_from_txt(file):
 # Serve the frontend page
 @app.route('/')
 def index():
-    return render_template('sample.html')  # Main HTML page for the frontend
+    return render_template('index.html')  # Main HTML page for the frontend
 
 # Endpoint for PDF, DOCX, and TXT Upload
 @app.route('/upload_file', methods=['POST'])
