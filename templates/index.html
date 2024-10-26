@@ -38,21 +38,21 @@
     <div class="flex-grow flex items-center justify-between p-4">
         <div class="container flex flex-row items-center justify-between max-w-6xl">
             <div class="hidden md:block flex-grow">
-                <img src="pngwing.png" alt="img" class="w-[500px] object-cover">
+                <img src="{{ url_for('static', filename='images/pngwing.png') }}" alt="img" class="w-[500px] object-cover">
             </div>
 
             <div class="upload-container border border-gray-200 bg-white p-8 rounded-lg shadow-lg w-full max-w-md transition-transform duration-300 hover:shadow-2xl hover:scale-105 ml-auto">
                 <h4 class="text-3xl font-bold mb-6 text-center text-gray-700 group relative animate__animated animate__fadeInDown flex items-center justify-center space-x-2">
-                    <img src="plane.png" alt="paper plane logo" width="28px" class="inline-block">
+                    <img src="{{ url_for('static', filename='images/plane.png') }}" alt="paper plane logo" width="28px" class="inline-block">
                     <span class="relative z-10 text-indigo-500 neon-glow">Upload a PDF File</span>
                     <span class="absolute inset-0 transform -translate-x-1 -translate-y-1 blur-lg opacity-80 text-indigo-400 neon-shadow"></span>
                 </h4>
 
 
 
-                    <form id="pdfForm" action="http://127.0.0.1:5000/upload_pdf" method="POST" enctype="multipart/form-data" class="animate__animated animate__fadeIn">
+                    <form id="pdfForm" action="http://127.0.0.1:5000/upload_file" method="POST" enctype="multipart/form-data" class="animate__animated animate__fadeIn">
                         <div class="mb-4 relative group" style="height: 150px;">
-                            <input type="file" id="pdfFile" name="pdf" accept=".pdf,.zip" required
+                            <input type="file" id="pdfFile" name="pdf" accept=".pdf,.docx" required
                                 class="block w-full border border-gray-300 rounded-lg p-3 mb-4 transition-all duration-300 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 focus:outline-none opacity-0 absolute inset-0 z-10 cursor-pointer"
                                 onchange="displayFileName()" />
                             <label for="pdfFile"
@@ -77,38 +77,37 @@
                     <!-- <img src="search.png" alt="search logo">
                     <h4 class="text-3xl font-bold mb-6 text-center" style="color: #316fd0;">Search by URL</h4> -->
                     <div class="flex items-center justify-center mb-6 space-x-2">
-                        <img src="search.png" alt="search logo" class="h-8 w-8">
+                        <img src="{{ url_for('static', filename='images/search.png') }}" alt="search logo" class="h-8 w-8">
                         <h4 class="text-2xl font-bold text-center" style="color: #316fd0;">Search by URL</h4>
                     </div>
                     
 
                     <form id="urlForm" action="#" method="POST" class="animate__animated animate__fadeIn">
                         <div class="flex items-center space-x-2">
-                          <input type="text"
-                                 class="form-control flex-grow px-4 py-2 border border-gray-300 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all duration-300 ease-in-out shadow-sm text-gray-600"
-                                 placeholder="Paste the URL..." id="userInput" style="font-size: 14px; padding: 8px;" required>
-                          <button type="button" onclick="sendMessage()"
-                                  class="btn btn-primary text-white shadow-md w-full py-2 font-semibold rounded-lg transition-all duration-200 transform hover:scale-105"
-                                  style="width: 100px; font-size: 14px; padding: 8px; background-color: #245aba; border-color: #245aba;">
-                            Search
-                          </button>
+                            <input type="text"
+                                class="form-control flex-grow px-4 py-2 border border-gray-300 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all duration-300 ease-in-out shadow-sm text-gray-600"
+                                placeholder="Paste the URL..." id="userInput" style="font-size: 14px; padding: 8px;">
+                            <button type="button" onclick="sendMessage()"
+                                class="btn btn-primary text-white shadow-md w-full py-2 font-semibold rounded-lg transition-all duration-200 transform hover:scale-105"
+                                style="width: 100px; font-size: 14px; padding: 8px; background-color: #245aba; border-color: #245aba;">
+                                Search
+                            </button>
                         </div>
-                        
-                        <!-- New Buttons for "Crawl Webpage" and "Crawl Website" -->
-                        <div id="crawlButtons" class="flex items-center space-x-2 mt-4 hidden">
-                            <button type="button" onclick="crawlWebpage()"
-                                    class="btn btn-secondary text-white shadow-md w-full py-2 font-semibold rounded-lg transition-all duration-200 transform hover:scale-105"
-                                    style="width: 120px; font-size: 14px; padding: 8px; background-color: #bed7fd; border-color: #3b82f6; color: #6ba4f7;">
-                              Crawl Webpage
-                            </button>
-                            <button type="button" onclick="crawlWebsite()"
-                                    class="btn btn-secondary text-white shadow-md w-full py-2 font-semibold rounded-lg transition-all duration-200 transform hover:scale-105"
-                                    style="width: 120px; font-size: 14px; padding: 8px; background-color: #bed7fd; border-color: #3b82f6; color: #6ba4f7;">
-                              Crawl Website
-                            </button>
-                          </div>
-                          
-                      </form>
+                    </form>
+
+                    <!-- New Buttons for "Crawl Webpage" and "Crawl Website" -->
+                    <div id="crawlButtons" class="flex items-center space-x-2 mt-4 hidden">
+                        <button type="button" onclick="crawlWebpage()"
+                                class="btn btn-secondary text-white shadow-md w-full py-2 font-semibold rounded-lg transition-all duration-200 transform hover:scale-105"
+                                style="width: 120px; font-size: 14px; padding: 8px; background-color: #bed7fd; border-color: #3b82f6; color: #6ba4f7;">
+                          Crawl Webpage
+                        </button>
+                        <button type="button" onclick="crawlWebsite()"
+                                class="btn btn-secondary text-white shadow-md w-full py-2 font-semibold rounded-lg transition-all duration-200 transform hover:scale-105"
+                                style="width: 120px; font-size: 14px; padding: 8px; background-color: #bed7fd; border-color: #3b82f6; color: #6ba4f7;">
+                          Crawl Website
+                        </button>
+                    </div>
                 
 
                 <div id="result" class="mt-4 font-bold text-gray-700 animate__animated animate__fadeInUp"></div>
@@ -141,21 +140,22 @@
                 return;
             }
 
-            formData.append("pdf", fileInput.files[0]);
+            formData.append("file", fileInput.files[0]);  // Ensure "file" matches the expected Flask key
 
             try {
-                const response = await fetch("http://127.0.0.1:5000/upload_pdf", {
+                const response = await fetch("http://127.0.0.1:5000/upload_file", {
                     method: "POST",
                     body: formData
                 });
 
                 const result = await response.json();
-                document.getElementById("result").textContent = result.message || "File uploaded successfully!";
+                document.getElementById("result").textContent = "File uploaded successfully!";
             } catch (error) {
                 document.getElementById("result").textContent = "An error occurred during upload.";
                 console.error("Upload error:", error);
             }
         }
+
 
         document.addEventListener("DOMContentLoaded", function() {
           const navbarToggler = document.querySelector(".navbar-toggler");
@@ -165,7 +165,6 @@
             navbarNav.classList.toggle("show");
           });
         });
-
 
         // search button javascript 
         // Function that executes when "Search" button is clicked
@@ -187,6 +186,7 @@
     function crawlWebsite() {
       alert("Crawl Website function triggered!");
     }
+
     </script>
 
 </body>
