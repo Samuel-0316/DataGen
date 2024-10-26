@@ -1,4 +1,4 @@
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, render_template, send_from_directory
 from flask_cors import CORS
 import PyPDF2
 import docx
@@ -7,13 +7,11 @@ import requests
 from bs4 import BeautifulSoup
 from urllib.parse import urljoin, urlparse
 
-app = Flask(__name__)
+app = Flask(__name__, static_folder="static", template_folder="templates")  # Specify static and template folders
 CORS(app)
-
 
 # PDF, DOCX, and TXT File Extraction Functions
 def extract_text_from_pdf(file):
-    """Extract text from a PDF file."""
     try:
         pdf_reader = PyPDF2.PdfReader(file)
         pdf_text = ""
@@ -23,9 +21,7 @@ def extract_text_from_pdf(file):
     except Exception as e:
         return f"Error reading PDF: {e}"
 
-
 def extract_text_from_docx(file):
-    """Extract text from a DOCX file."""
     try:
         doc = docx.Document(file)
         doc_text = "\n".join([para.text for para in doc.paragraphs])
@@ -33,14 +29,16 @@ def extract_text_from_docx(file):
     except Exception as e:
         return f"Error reading DOCX: {e}"
 
-
 def extract_text_from_txt(file):
-    """Extract text from a TXT file."""
     try:
-        return file.read().decode('utf-8')  # Decoding the file content as it's binary.
+        return file.read().decode('utf-8')
     except Exception as e:
         return f"Error reading TXT: {e}"
 
+# Serve the frontend page
+@app.route('/')
+def index():
+    return render_template('sample.html')  # Main HTML page for the frontend
 
 # Endpoint for PDF, DOCX, and TXT Upload
 @app.route('/upload_file', methods=['POST'])
@@ -52,33 +50,29 @@ def upload_file():
     if file.filename == '':
         return jsonify({"error": "No selected file"}), 400
 
-    # Determine the file extension
     file_extension = os.path.splitext(file.filename)[1].lower()
 
     if file_extension == '.pdf':
-        # Read PDF
         model_text = extract_text_from_pdf(file)
-        print(model_text)
     elif file_extension == '.docx':
-        # Read DOCX
         model_text = extract_text_from_docx(file)
-        print(model_text)
     elif file_extension == '.txt':
-        # Read TXT
         model_text = extract_text_from_txt(file)
-        print(model_text)
     else:
         return jsonify({"error": "Unsupported file format"}), 400
 
     if model_text.startswith("Error"):
         return jsonify({"error": model_text}), 500
+    
+    print(model_text)
+    print("\n")
 
     return jsonify({"text": model_text}), 200
-# --------------------------------------------------------------------------------------------------
+# -----------------------------------------------------------------------------------------------
 # Webpage Extraction and Crawling Functions
 def extract_data_from_webpage(url):
     try:
-        response = requests.get(url, timeout=5)  # Added timeout to avoid hanging requests
+        response = requests.get(url, timeout=5)
         response.raise_for_status()
         soup = BeautifulSoup(response.text, 'html.parser')
         text_content = soup.get_text(separator=' ', strip=True)
@@ -91,13 +85,11 @@ def extract_data_from_webpage(url):
 
         return text_content, links
     except requests.exceptions.RequestException as e:
-        return None, []  # Return None if an error occurred
-
+        return None, []
 
 def is_valid_url(url):
     parsed = urlparse(url)
     return bool(parsed.scheme in ['http', 'https'])
-
 
 def crawl_website(start_url, max_pages=50):
     visited = set()
@@ -121,8 +113,6 @@ def crawl_website(start_url, max_pages=50):
 
     return crawled_content
 
-
-# Endpoint for extracting data from a single webpage
 @app.route('/extract_webpage', methods=['POST'])
 def extract_webpage():
     data = request.json
@@ -134,17 +124,12 @@ def extract_webpage():
     text_content, links = extract_data_from_webpage(url)
     if text_content is None:
         return jsonify({"error": "Unable to retrieve webpage content"}), 500
-
+    
     print(text_content)
     print("\n")
 
-    for link in links:
-        print(link)
-
     return jsonify({"text_content": text_content, "links": links}), 200
 
-
-# Endpoint for crawling a website
 @app.route('/crawl_webpage', methods=['POST'])
 def crawl_webpage():
     data = request.json
@@ -161,18 +146,15 @@ def crawl_webpage():
 
     return jsonify({"content": text_content}), 200
 
-
 # Error handler for 404
 @app.errorhandler(404)
 def page_not_found(e):
     return jsonify({"error": "Resource not found"}), 404
 
-
 # Error handler for 500
 @app.errorhandler(500)
 def internal_server_error(e):
     return jsonify({"error": "Internal server error"}), 500
-
 
 if __name__ == '__main__':
     app.run(host="127.0.0.1", port=5000, debug=True)
