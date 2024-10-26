@@ -9,7 +9,7 @@ model, tokenizer = load("mlx-community/quantized-gemma-2b-it")
 
 def generate_question(paragraph):
     # Create a prompt to generate a question based on the paragraph
-    prompt = f"Generate a question for the following paragraph: '{paragraph}'"
+    prompt = f"Generate question- long answer pairs based on the following paragraph: '{paragraph}'"
     response = generate(model, tokenizer, prompt=prompt, verbose=True, max_tokens=100)
     return response.strip()  # Strip to clean up the response
 
