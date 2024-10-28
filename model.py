@@ -121,4 +121,5 @@ def process_chunk():
     return jsonify({"message": "Chunk processed", "question": question, "answer": answer}), 200
 
 if __name__ == '__main__':
-    app.run(port=5001)
+    # Update the host to allow LAN access
+    app.run(host='0.0.0.0', port=5001)

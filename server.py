@@ -235,7 +235,7 @@ def terminal():
 def send_chunk_to_model(chunk):
     try:
         response = requests.post(
-            "http://127.0.0.1:5001/process_chunk",
+            "http://10.20.31.198:5001/process_chunk",
             json={"chunk": chunk},
             headers={"Content-Type": "application/json"}
         )
