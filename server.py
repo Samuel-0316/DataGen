@@ -181,7 +181,7 @@ def internal_server_error(e):
 
 if __name__ == '__main__':
     app.run(host="127.0.0.1", port=5000, debug=True)'''
-
+# Required imports and configurations
 from flask import Flask, request, jsonify, render_template
 from flask_cors import CORS
 import PyPDF2
