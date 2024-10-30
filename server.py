@@ -181,6 +181,7 @@ def internal_server_error(e):
 
 if __name__ == '__main__':
     app.run(host="127.0.0.1", port=5000, debug=True)'''
+    
 # Required imports and configurations
 from flask import Flask, request, jsonify, render_template
 from flask_cors import CORS
@@ -235,7 +236,7 @@ def terminal():
 def send_chunk_to_model(chunk):
     try:
         response = requests.post(
-            "http://10.20.31.198:5001/process_chunk",
+            "http://10.20.45.196:5001/process_chunk",
             json={"chunk": chunk},
             headers={"Content-Type": "application/json"}
         )
