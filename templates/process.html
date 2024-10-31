@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
     <style>
         body {
             font-family: 'Segoe UI', system-ui, sans-serif;
@@ -205,7 +206,7 @@
                             <div class="status-indicator"></div>
                             <h3>LLM Analysis</h3>
                         </div>
-                        <p>Generating structured dataset</p>
+                        <p>Sending chunks & Generating structured dataset</p>
                     </div>
                     <div class="step" id="step5">
                         <div class="step-header">
@@ -224,22 +225,11 @@
     </div>
 
     <script>
-        function log(message) {
-            const terminal = document.getElementById('terminal');
-            const timestamp = new Date().toLocaleTimeString();
-            terminal.innerHTML += `[${timestamp}] ${message}\n`;
-            terminal.scrollTop = terminal.scrollHeight;
-        }
-
-        function updatePreview(text) {
-            const preview = document.getElementById('previewBox');
-            preview.innerHTML = text;
-        }
-
+        // Function to update the visual status of each step
         function updateStep(stepNumber, status) {
             const step = document.getElementById(`step${stepNumber}`);
             const indicator = step.querySelector('.status-indicator');
-            
+    
             if (status === 'active') {
                 step.classList.add('active');
                 step.classList.remove('completed');
@@ -252,71 +242,66 @@
                 indicator.classList.add('completed');
             }
         }
-
-        const dummyText = `Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.`;
-
-        async function startProcess() {
-            // Step 1: Input Processing
-            updateStep(1, 'active');
-            log('Starting input processing...');
-            log('Detected file type: PDF');
-            log('Validating file integrity...');
-            await new Promise(resolve => setTimeout(resolve, 1500));
-            updatePreview('File validated successfully. Beginning extraction...');
-            updateStep(1, 'completed');
-
-            // Step 2: Text Extraction
-            updateStep(2, 'active');
-            log('Extracting text from document...');
-            log('Processing page 1 of 3...');
-            await new Promise(resolve => setTimeout(resolve, 1000));
-            log('Processing page 2 of 3...');
-            await new Promise(resolve => setTimeout(resolve, 1000));
-            log('Processing page 3 of 3...');
-            await new Promise(resolve => setTimeout(resolve, 1000));
-            updatePreview(dummyText);
-            updateStep(2, 'completed');
-
-            // Step 3: NLP Processing
-            updateStep(3, 'active');
-            log('Initializing NLP pipeline...');
-            log('Creating text chunks...');
-            await new Promise(resolve => setTimeout(resolve, 2000));
-            log('Analyzing semantic structure...');
-            updatePreview('Chunk 1: Lorem ipsum dolor sit amet\nChunk 2: consectetur adipiscing elit\nChunk 3: Sed do eiusmod tempor');
-            updateStep(3, 'completed');
-
-            // Step 4: LLM Analysis
-            updateStep(4, 'active');
-            log('Starting LLM analysis...');
-            log('Generating structured data...');
-            await new Promise(resolve => setTimeout(resolve, 2500));
-            updatePreview('{\n  "category": "Sample",\n  "sentiment": "neutral",\n  "key_points": ["Lorem ipsum", "dolor sit"]\n}');
-            updateStep(4, 'completed');
-
-            // Step 5: CSV Generation
-            updateStep(5, 'active');
-            log('Formatting data for CSV...');
-            log('Generating final output...');
-            await new Promise(resolve => setTimeout(resolve, 1500));
-            updatePreview('category,sentiment,key_points\nSample,neutral,"Lorem ipsum, dolor sit"');
-            updateStep(5, 'completed');
-
-            log('Processing complete! CSV file is ready for download.');
-            document.getElementById('downloadSection').style.display = 'block';
+    
+        // Log fetching function
+        function fetchProcessLogs() {
+            $.ajax({
+                url: '/get_process_log',
+                method: 'GET',
+                success: function(response) {
+                    const terminal = document.getElementById('terminal');
+                    response.forEach(entry => {
+                        const timestamp = new Date().toLocaleTimeString();
+                        terminal.innerHTML += `[${timestamp}] ${entry.function} - ${entry.status}<br>`;
+                    });
+                    terminal.scrollTop = terminal.scrollHeight; // Scroll to bottom
+    
+                    // Update pipeline steps based on process logs
+                    updatePipelineSteps(response);
+                },
+                error: function() {
+                    console.error('Failed to fetch process logs');
+                }
+            });
         }
-
-        function downloadCSV() {
-            const csvContent = 'category,sentiment,key_points\nSample,neutral,"Lorem ipsum, dolor sit"';
-            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-            const link = document.createElement('a');
-            link.href = URL.createObjectURL(blob);
-            link.download = 'processed_data.csv';
-            link.click();
+    
+        // Function to handle the mapping of logs to steps and updating their status
+        function updatePipelineSteps(logs) {
+            // Map each function to its corresponding step number
+            const stepsMapping = {
+                "extract_text_from_pdf": 2,
+                "extract_text_from_docx": 2,
+                "extract_text_from_txt": 2,
+                "extract_data_from_webpage": 2,
+                "crawl_website": 2,
+                "NLP_processing": 3,
+                "send_chunk_to_model": 4,
+                "generate_csv": 5
+            };
+    
+            // Reset all steps before updating
+            for (let i = 1; i <= 5; i++) {
+                updateStep(i, ""); // Reset each step's state
+            }
+    
+            // Update steps based on the current logs
+            logs.forEach(entry => {
+                const stepNumber = stepsMapping[entry.function];
+                if (stepNumber) {
+                    if (entry.status === "Started") {
+                        updateStep(stepNumber, "active");
+                    } else if (entry.status.includes("Completed") || entry.status.includes("Error")) {
+                        updateStep(stepNumber, "completed");
+                    }
+                }
+            });
         }
-
-        // Start the process automatically when the page loads
-        window.onload = startProcess;
-    </script>
+    
+        $(document).ready(function() {
+            updateStep(1, "completed");
+            fetchProcessLogs();  // Initial fetch on page load
+            setInterval(fetchProcessLogs, 1000);  // Auto-refresh every second
+        });
+    </script>    
 </body>
 </html>
