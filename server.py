@@ -18,8 +18,10 @@ Global_data = ""
 process_log = []  # To store function call logs
 
 # Log function calls for dynamic frontend display
-def log_function_call(func_name, status="Started"):
+def log_function_call(func_name, status="Started", data=None):
     entry = {"function": func_name, "status": status}
+    if data:
+        entry["data"] = data  # Include data in the log if provided
     process_log.append(entry)
 
 # PDF, DOCX, and TXT File Extraction Functions
@@ -80,7 +82,7 @@ def send_chunk_to_model(chunk):
         log_function_call("send_chunk_to_model", f"Error: {e}")
         return {"error": f"Error communicating with model: {e}"}
 
-@app.route('/upload_file', methods=['POST'])                                                 # file_type, extracting_text, nlp processing
+@app.route('/upload_file', methods=['POST'])                                                 
 def upload_file():
     if 'file' not in request.files:
         log_function_call("upload_file", "Error: No file part")
@@ -211,6 +213,9 @@ def crawl_webpage():
 
     # Crawl the website and get crawled content and links
     Global_data, crawled_links = crawl_website(start_url, max_pages)
+
+    # Log the crawled links
+    log_function_call("crawl_webpage", "Crawling Completed", data={"crawled_links": crawled_links})
 
     log_function_call("NLP_processing", "Started")
     doc = nlp(Global_data)
