@@ -7,6 +7,57 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.min.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Fade-in animation for alert message */
+        @keyframes fadeIn {
+            0% {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+            100% {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .fade-in {
+            animation: fadeIn 0.5s ease-out;
+        }
+
+        .alert-box {
+            display: flex;
+            align-items: center;
+            padding: 1em;
+            margin-top: 1em;
+            border-radius: 5px;
+            font-weight: bold;
+            box-shadow: 0px 0px 5px rgba(0, 0, 0, 0.1);
+        }
+
+        .alert-info {
+            background-color: #e7f3ff;
+            border: 1px solid #85b8ff;
+            color: #3178c6;
+        }
+
+        .alert-warning {
+            background-color: #fff4e5;
+            border: 1px solid #ffd086;
+            color: #b87018;
+        }
+
+        .alert-error {
+            background-color: #ffe5e5;
+            border: 1px solid #ff8585;
+            color: #d80027;
+        }
+
+        .alert-box svg {
+            margin-right: 0.5em;
+            width: 24px;
+            height: 24px;
+        }
+    </style>
 </head>
 
 <body class="bg-gray-100 flex flex-col min-h-screen">
@@ -47,8 +98,6 @@
                     <span class="absolute inset-0 transform -translate-x-1 -translate-y-1 blur-lg opacity-80 text-indigo-400 neon-shadow"></span>
                 </h4>
 
-
-
                     <form id="pdfForm" action="http://127.0.0.1:5000/upload_file" method="POST" enctype="multipart/form-data" class="animate__animated animate__fadeIn">
                         <div class="mb-4 relative group" style="height: 150px;">
                             <input type="file" id="pdfFile" name="pdf" accept=".pdf,.docx,.txt" required
@@ -64,7 +113,7 @@
                                 <span id="fileText" class="absolute bottom-3 text-gray-400 text-sm">Drag & drop .pdf file here</span>
                             </label>
                         </div>
-                        <button type="button" onclick="uploadPDF();navigateToTerminal()"
+                        <button type="button" target="_blank" onclick="uploadPDF()"
                             class="btn btn-primary w-full py-2 font-semibold rounded-lg text-white transition-all duration-200 transform hover:scale-105 shadow-md"
                             style="padding: 10px; font-size: 14px; background-color: #245aba; border-color: #245aba;">
                             Upload PDF
@@ -94,7 +143,7 @@
                         <div id="crawlButtons" class="flex flex-col md:flex-row items-center justify-between space-y-2 md:space-y-0 md:space-x-4 mt-4 hidden">
                         
                             <!-- Crawl Webpage Button -->
-                            <button type="button" onclick="sendMessage();navigateToTerminal()"
+                            <button type="button" onclick="sendMessage()"
                                     class="w-full md:w-auto px-6 py-2 font-semibold rounded-lg transition-all duration-200 transform hover:scale-105 text-white shadow-md"
                                     style="background-color: #6ba4f7; border: 1px solid #3b82f6; font-size: 14px;">
                             Crawl Webpage
@@ -108,7 +157,7 @@
                                     placeholder="Pages" style="border: none; font-size: 14px;">
                             
                             <!-- Crawl Website Button -->
-                            <button type="button" onclick="crawlWebsite();navigateToTerminal()"
+                            <button type="button" onclick="crawlWebsite()"
                                     class="px-4 py-2 font-semibold uppercase text-blue-800"
                                     style="border: none; font-size: 14px;">
                                 Crawl Website
@@ -117,7 +166,6 @@
                         </div>
 
                         <div id="result" class="mt-4 font-bold text-gray-700 animate__animated animate__fadeInUp"></div>
-  
                           </div>
                       </form>
             </div>
@@ -140,13 +188,55 @@
             }
         }
 
+        function navigateToTerminal() {
+            window.location.href = "/process";  // Redirect to the terminal route
+        }
+
+        function showAlert(message, type = 'info') {
+            const resultDiv = document.getElementById("result");
+            resultDiv.innerHTML = ''; // Clear previous content
+
+            let alertClass = '';
+            let icon = '';
+
+            // Choose alert type
+            switch (type) {
+                case 'info':
+                    alertClass = 'alert-info';
+                    icon = '<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1 4h.01M12 12h.01M11 8h2m0-2a10 10 0 110 20 10 10 0 010-20z" /></svg>';
+                    break;
+                case 'warning':
+                    alertClass = 'alert-warning';
+                    icon = '<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.29 3.86L1.82 12.36c-.4.4-.4 1.04 0 1.44l8.47 8.49c.39.39 1.04.39 1.44 0l8.47-8.49c.4-.4.4-1.04 0-1.44L11.73 3.86a1.02 1.02 0 00-1.44 0zm1.71 11.65h-2v-2h2v2zm0-4h-2V7h2v4z" /></svg>';
+                    break;
+                case 'error':
+                    alertClass = 'alert-error';
+                    icon = '<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 5.636L5.636 18.364m12.728 0L5.636 5.636" /></svg>';
+                    break;
+            }
+
+            // Display alert
+            resultDiv.innerHTML = `<div class="alert-box ${alertClass}">${icon}<span>${message}</span></div>`;
+            resultDiv.classList.add('fade-in');
+
+            // Auto-hide alert
+            setTimeout(() => {
+                resultDiv.classList.remove('fade-in');
+                resultDiv.innerHTML = '';
+            }, 3000); // Hide after 3 seconds
+        }
+
         async function uploadPDF() {
             const formData = new FormData();
+            const resultDiv = document.getElementById("result");
             const fileInput = document.getElementById("pdfFile");
 
             if (fileInput.files.length === 0) {
-                document.getElementById("result").textContent = "Please select a file.";
+                showAlert("Please select a file.", "warning");
                 return;
+            }
+            else if(fileInput.files.length === 1){
+                navigateToTerminal();
             }
 
             formData.append("file", fileInput.files[0]);  // Ensure "file" matches the expected Flask key
@@ -184,6 +274,7 @@
             const numberInput = document.getElementById("numberInput").value; // Get number input if needed
 
             if (userInput) {
+                navigateToTerminal();
                 try {
                     const response = await fetch("http://127.0.0.1:5000/extract_webpage", {
                         method: "POST",
@@ -195,11 +286,14 @@
                     if (result.error) {
                         document.getElementById("result").textContent = result.error;
                     }
-                } 
+                }
                 catch (error) {
                     document.getElementById("result").textContent = "An error occurred while extracting data.";
                     console.error("Extract error:", error);
                 }
+            }
+            else{
+                showAlert("Please Enter the URL...","warning");
             }
         }
 
@@ -208,6 +302,7 @@
             const pages = document.getElementById("numberInput").value || 1; // Default to 1 if pages is empty
 
             if (userInput) {
+                navigateToTerminal();
                 try {
                     const response = await fetch("http://127.0.0.1:5000/crawl_webpage", {
                         method: "POST",
@@ -224,16 +319,10 @@
                     console.error("Crawl error:", error);
                 }
             }
+            else{
+                showAlert("Please Enter the URL...","warning");
+            }
         }
-
-
-        function navigateToTerminal() {
-            window.location.href = "/terminal";  // Redirect to the terminal route
-        }
-
-
-
     </script>
-
 </body>
 </html>
