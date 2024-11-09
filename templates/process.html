@@ -136,32 +136,39 @@
         }
 
         #downloadSection {
+            display: none;
             text-align: center;
             margin-top: 1rem;
-            display: none;
         }
 
-        button {
-            background: #2196f3;
-            color: white;
+
+        #downloadButton {
+            background: #2196f3; /* Page theme color */
             border: none;
-            padding: 10px 20px;
+            color: white;
+            padding: 15px 30px;
+            font-size: 18px;
+            font-weight: bold;
             border-radius: 5px;
             cursor: pointer;
-            transition: background 0.3s;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+            margin: 20px auto;
+            display: inline-block;
+            animation: breathing 2s ease-in-out infinite; /* Apply breathing animation */
         }
 
-        button:hover {
-            background: #1976d2;
+        #downloadButton:hover {
+            background: #00ffae;
+            transform: translateY(-2px);
         }
 
-        .output-preview {
-            background: white;
-            padding: 20px;
-            border-radius: 8px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-            margin-top: 20px;
+        /* Breathing animation */
+        @keyframes breathing {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
         }
+
     </style>
 </head>
 <body>
@@ -230,23 +237,80 @@
                         </div>
                         <p>Sending chunks & Generating structured dataset</p>
                     </div>
-                    <div class="step" id="step5">
-                        <div class="step-header">
-                            <div class="status-indicator"></div>
-                            <h3>CSV Generation</h3>
-                        </div>
-                        <p>Formatting and saving data</p>
-                    </div>
                 </div>
 
                 <div id="downloadSection">
-                    <button onclick="downloadCSV()">Download Processed Data (CSV)</button>
+                    <button id="downloadButton" onclick="downloadCSV()">Download Processed Data (CSV)</button>
                 </div>
             </div>
         </div>
     </div>
 
     <script>
+        function downloadCSV() {
+            const terminal = document.getElementById('terminal'); // Terminal element to log status updates
+
+            // Log "Started" status for Step 5
+            const startTimestamp = new Date().toLocaleTimeString();
+            terminal.innerHTML += `[${startTimestamp}] CSV Generation - Started<br>`;
+            terminal.scrollTop = terminal.scrollHeight; // Scroll to bottom
+
+            // Get the QA pairs data from the server
+            fetch('/get_qa_pairs')
+                .then(response => response.json())
+                .then(data => {
+                    try {
+                        const qa_pairs = JSON.parse(data.qa_pairs);
+
+                        // Convert to CSV
+                        let csvContent = "Question,Answer\n"; // CSV header
+                        qa_pairs.forEach(pair => {
+                            const question = pair.question.replace(/"/g, '""');
+                            const answer = pair.answer.replace(/"/g, '""');
+                            csvContent += `"${question}","${answer}"\n`;
+                        });
+
+                        // Create and trigger download
+                        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+                        const url = URL.createObjectURL(blob);
+                        const link = document.createElement('a');
+                        link.setAttribute('href', url);
+                        link.setAttribute('download', 'qa_pairs.csv');
+                        document.body.appendChild(link);
+                        link.click();
+                        document.body.removeChild(link);
+
+                        // Log "Completed" status for Step 5
+                        const endTimestamp = new Date().toLocaleTimeString();
+                        terminal.innerHTML += `[${endTimestamp}] CSV Generation - Completed<br>`;
+                        terminal.scrollTop = terminal.scrollHeight; // Scroll to bottom
+
+                        // Show the download button
+                        document.getElementById('downloadSection').style.display = 'block';
+                    } catch (error) {
+                        console.error('Error processing JSON:', error);
+
+                        // Log "Error" status for Step 5
+                        const errorTimestamp = new Date().toLocaleTimeString();
+                        terminal.innerHTML += `[${errorTimestamp}] Step 5 (CSV Generation) - Error: ${error.message}<br>`;
+                        terminal.scrollTop = terminal.scrollHeight; // Scroll to bottom
+
+                        alert('Error creating CSV file. Please try again.');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error fetching QA pairs:', error);
+
+                    // Log "Error" status for Step 5
+                    const errorTimestamp = new Date().toLocaleTimeString();
+                    terminal.innerHTML += `[${errorTimestamp}] Step 5 (CSV Generation) - Error: ${error.message}<br>`;
+                    terminal.scrollTop = terminal.scrollHeight; // Scroll to bottom
+
+                    alert('Error downloading data. Please try again.');
+                });
+        }
+
+    
         // Function to update the visual status of each step
         function updateStep(stepNumber, status) {
             const step = document.getElementById(`step${stepNumber}`);
@@ -262,6 +326,11 @@
                 step.classList.add('completed');
                 indicator.classList.remove('active');
                 indicator.classList.add('completed');
+    
+                // Show the download button if step 5 is completed
+                if (stepNumber === 4) {
+                    document.getElementById('downloadSection').style.display = 'block';
+                }
             }
         }
     
@@ -275,7 +344,7 @@
                     response.forEach(entry => {
                         const timestamp = new Date().toLocaleTimeString();
                         terminal.innerHTML += `[${timestamp}] ${entry.function} - ${entry.status}<br>`;
-                        
+    
                         // Display each crawled link on a new line if they are present in the log entry
                         if (entry.data && entry.data.crawled_links) {
                             terminal.innerHTML += `[${timestamp}] Crawled Links:<br>`;
@@ -305,12 +374,12 @@
                 "extract_data_from_webpage": 2,
                 "crawl_website": 2,
                 "NLP_processing": 3,
-                "send_chunk_to_model": 4,
-                "generate_csv": 5
+                "send_chunk_to_LLM": 4
+                // Step 5 (CSV generation) is handled directly in the browser
             };
     
             // Reset all steps before updating
-            for (let i = 1; i <= 5; i++) {
+            for (let i = 1; i <= 4; i++) {
                 updateStep(i, ""); // Reset each step's state
             }
     
@@ -329,9 +398,9 @@
     
         $(document).ready(function() {
             updateStep(1, "completed");
-            fetchProcessLogs();  // Initial fetch on page load
-            setInterval(fetchProcessLogs, 1000);  // Auto-refresh every second
+            fetchProcessLogs(); // Initial fetch on page load
+            setInterval(fetchProcessLogs, 1000); // Auto-refresh every second
         });
-    </script>     
+    </script>    
 </body>
 </html>
