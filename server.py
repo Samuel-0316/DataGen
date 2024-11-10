@@ -10,7 +10,6 @@ from bs4 import BeautifulSoup
 from urllib.parse import urljoin, urlparse
 import spacy
 import openai
-import json
 
 # Initialize Spacy NLP model and OpenAI API
 nlp = spacy.load("en_core_web_sm")
