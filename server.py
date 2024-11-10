@@ -13,7 +13,7 @@ import openai
 import json
 
 # Initialize Spacy NLP model and OpenAI API
-nlp = spacy.load("./spacy_model/en_core_web_sm")
+nlp = spacy.load("en_core_web_sm")
 openai.api_key = os.getenv("OPENAI_API_KEY")  # Ensure your API key is set in environment variables
 
 app = Flask(__name__, static_folder="static", template_folder="templates")
