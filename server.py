@@ -1,4 +1,5 @@
 # Required imports and configurations
+import time
 from flask import Flask, request, jsonify, render_template
 from flask_cors import CORS
 import PyPDF2
@@ -8,14 +9,19 @@ import requests
 from bs4 import BeautifulSoup
 from urllib.parse import urljoin, urlparse
 import spacy
+import openai
+import json
+
+# Initialize Spacy NLP model and OpenAI API
 nlp = spacy.load("en_core_web_sm")
+openai.api_key = os.getenv("OPENAI_API_KEY")  # Ensure your API key is set in environment variables
 
 app = Flask(__name__, static_folder="static", template_folder="templates")
 CORS(app)
 
 Global_data = ""
-
 process_log = []  # To store function call logs
+qa_pairs_json = ""  # Initialize as an empty string
 
 # Log function calls for dynamic frontend display
 def log_function_call(func_name, status="Started", data=None):
@@ -67,22 +73,66 @@ def index():
 def process():
     return render_template('process.html')
 
-# Function to send chunk to model for processing
-def send_chunk_to_model(chunk):
-    log_function_call("send_chunk_to_model")
-    try:
-        response = requests.post(
-            "http://10.20.31.198:5001/process_chunk",
-            json={"chunk": chunk},
-            headers={"Content-Type": "application/json"}
-        )
-        # log_function_call("send_chunk_to_model", "Completed")
-        return response.json()
-    except requests.exceptions.RequestException as e:
-        log_function_call("send_chunk_to_model", f"Error: {e}")
-        return {"error": f"Error communicating with model: {e}"}
+# Function to send chunk to Azure OpenAI for processing
+def send_chunk_to_LLM(chunk):
+    global qa_pairs_json  # Specify that we are using the global variable
 
-@app.route('/upload_file', methods=['POST'])                                                 
+    # Replace with your actual Azure OpenAI API key and endpoint
+    API_KEY = "ca4f7fa7152749218fa8462c3a60aeea"
+    ENDPOINT = "https://khazi18gpt.openai.azure.com/openai/deployments/Khazi18GPT/chat/completions?api-version=2024-02-15-preview"
+
+    headers = {
+        "Content-Type": "application/json",
+        "api-key": API_KEY,
+    }
+
+    payload = {
+        "messages": [
+            {
+                "role": "system",
+                "content": "You are an AI assistant that generates question-answer pairs in JSON format only. Each answer should be a single word. Respond in JSON format without any additional text. Format the output as [{'question': 'Your question?', 'answer': 'Answer'}]."
+            },
+            {
+                "role": "user",
+                "content": f"Generate questions and answers in JSON format for this text: {chunk}"
+            }
+        ],
+        "temperature": 0.5,
+        "top_p": 0.9,
+        "max_tokens": 150
+    }
+
+    try:
+        response = requests.post(ENDPOINT, headers=headers, json=payload)
+        response.raise_for_status()
+
+        response_data = response.json()
+        content = response_data["choices"][0]["message"]["content"]
+        print(content)
+
+        # Load the new response content into a list
+        try:
+            new_qa_pairs = json.loads(content)
+        except json.JSONDecodeError:
+            print("Error: Could not parse the output as JSON.")
+            return "[]"
+
+        # Load existing data from qa_pairs_json if present, else initialize with an empty list
+        existing_qa_pairs = json.loads(qa_pairs_json) if qa_pairs_json else []
+
+        # Append the new data
+        existing_qa_pairs.extend(new_qa_pairs)
+
+        # Update the global variable with the combined data
+        qa_pairs_json = json.dumps(existing_qa_pairs)
+
+        return qa_pairs_json
+    except requests.RequestException as e:
+        log_function_call("send_chunk_to_LLM", f"Error: {e}")
+        qa_pairs_json = json.dumps({"error": f"Error communicating with LLM: {e}"})
+        return qa_pairs_json
+
+@app.route('/upload_file', methods=['POST'])
 def upload_file():
     if 'file' not in request.files:
         log_function_call("upload_file", "Error: No file part")
@@ -112,19 +162,24 @@ def upload_file():
     log_function_call("NLP_processing", "Started")
     doc = nlp(Global_data)
     sentences = [sent.text for sent in doc.sents]
-    chunk_size = 4
+    chunk_size = 10
     chunks = [''.join(sentences[i:i+chunk_size]) for i in range(0, len(sentences), chunk_size)]
     responses = []
     log_function_call("NLP_processing", "Completed")
 
+    log_function_call("sending_chunk_to_LLM", "Started")
     for i, chunk in enumerate(chunks):
         print(f"Chunk{i+1}:\n{chunk}\n")
-        response = send_chunk_to_model(chunk)
+        response = send_chunk_to_LLM(chunk)
         responses.append(response)
+        time.sleep(20)
+    log_function_call("sending_chunk_to_LLM", "Completed")
 
-    log_function_call("Successfully sent all chunks to model", "Completed")
+    log_function_call("Successfully sent all chunks to LLM", "Completed")
 
     return jsonify({"text": Global_data, "chunks": chunks, "model_responses": responses}), 200
+
+# The rest of the code remains the same as provided.
 
 #----------------------------------------------------------------------
 
@@ -193,12 +248,15 @@ def extract_webpage():
     responses = []
     log_function_call("NLP_processing", "Completed")
 
+    log_function_call("sending_chunk_to_LLM", "Started")
     for i, chunk in enumerate(chunks):
         print(f"Chunk{i+1}:\n{chunk}\n")
-        response = send_chunk_to_model(chunk)
+        response = send_chunk_to_LLM(chunk)
         responses.append(response)
+        time.sleep(10)
+    log_function_call("sending_chunk_to_LLM", "Completed")
 
-    log_function_call("Successfully sent all chunks to model", "Completed")
+    log_function_call("Successfully sent all chunks to LLM", "Completed")
 
     return jsonify({"text_content": Global_data, "model_responses": responses}), 200
 
@@ -209,13 +267,15 @@ def crawl_webpage():
     max_pages = int(data.get('max_pages', 50))
 
     if not start_url or not is_valid_url(start_url):
+        log_function_call("crawl_webpage", "Error: Invalid URL")
         return jsonify({"error": "Valid URL is required"}), 400
 
-    # Crawl the website and get crawled content and links
-    Global_data, crawled_links = crawl_website(start_url, max_pages)
-
-    # Log the crawled links
-    log_function_call("crawl_webpage", "Crawling Completed", data={"crawled_links": crawled_links})
+    try:
+        Global_data, crawled_links = crawl_website(start_url, max_pages)
+        log_function_call("crawl_webpage", "Crawling Completed", data={"crawled_links": crawled_links})
+    except Exception as e:
+        log_function_call("crawl_webpage", f"Error: {e}")
+        return jsonify({"error": f"Error during crawling: {e}"}), 500
 
     log_function_call("NLP_processing", "Started")
     doc = nlp(Global_data)
@@ -225,12 +285,15 @@ def crawl_webpage():
     responses = []
     log_function_call("NLP_processing", "Completed")
 
+    log_function_call("sending_chunk_to_LLM", "Started")
     for i, chunk in enumerate(chunks):
         print(f"Chunk{i+1}:\n{chunk}\n")
-        response = send_chunk_to_model(chunk)
+        response = send_chunk_to_LLM(chunk)
         responses.append(response)
+        time.sleep(20)
+    log_function_call("sending_chunk_to_LLM", "Completed")
 
-    log_function_call("Successfully sent all chunks to model", "Completed")
+    log_function_call("Successfully sent all chunks to LLM", "Completed")
 
     return jsonify({"crawled_content": Global_data, "crawled_links": crawled_links, "model_responses": responses}), 200
 
@@ -240,6 +303,12 @@ def get_process_log():
     log_data = jsonify(process_log)  # Save the log data to be returned
     process_log.clear()  # Clear the log after saving it
     return log_data, 200
+
+# Add a new route to get the QA pairs JSON
+@app.route('/get_qa_pairs', methods=['GET'])
+def get_qa_pairs():
+    global qa_pairs_json
+    return jsonify({"qa_pairs": qa_pairs_json}), 200
 
 @app.errorhandler(404)
 def page_not_found(e):
