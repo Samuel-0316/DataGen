@@ -20,6 +20,14 @@ openai.api_key = os.getenv("OPENAI_API_KEY")  # Ensure your API key is set in en
 app = Flask(__name__, static_folder="static", template_folder="templates")
 CORS(app)
 
+# Add CORS headers to all responses to handle cross-origin requests
+@app.after_request
+def add_cors_headers(response):
+    response.headers['Access-Control-Allow-Origin'] = '*'
+    response.headers['Access-Control-Allow-Methods'] = 'GET, POST, OPTIONS'
+    response.headers['Access-Control-Allow-Headers'] = 'Content-Type, Authorization'
+    return response
+
 Global_data = ""
 process_log = []  # To store function call logs
 qa_pairs_json = ""
@@ -397,5 +405,7 @@ def page_not_found(e):
 def internal_server_error(e):
     return jsonify({"error": "Internal server error"}), 500
 
+# if __name__ == '__main__':
+#     app.run(host="127.0.0.1", port=5000, debug=True)
 if __name__ == '__main__':
-    app.run(host="127.0.0.1", port=5000, debug=True)
+    app.run(debug=True)
