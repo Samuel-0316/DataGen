@@ -163,6 +163,7 @@ def send_chunk_to_LLM(chunk):
 
 @app.route('/upload_file', methods=['POST'])
 def upload_file():
+    print(request.files)  # Log incoming files
     if 'file' not in request.files:
         log_function_call("upload_file", "Error: No file part")
         return jsonify({"error": "No file part"}), 400
@@ -405,7 +406,5 @@ def page_not_found(e):
 def internal_server_error(e):
     return jsonify({"error": "Internal server error"}), 500
 
-# if __name__ == '__main__':
-#     app.run(host="127.0.0.1", port=5000, debug=True)
-if __name__ == '__main__':
-    app.run(debug=True)
+if __name__ == "__main__":
+    app.run(host='0.0.0.0', port=5000)
