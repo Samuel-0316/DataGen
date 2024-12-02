@@ -11,6 +11,9 @@ from urllib.parse import urljoin, urlparse
 import json
 from textblob import TextBlob
 import cohere
+import nltk
+
+nltk.data.path.append('./nltk_data')
 
 # Initialize the Cohere client
 cohere_api_key = "PqaHJXfKE4ZOJx9plxcRk0xirubw8bGjFq17Y35N"
