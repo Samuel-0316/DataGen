@@ -8,14 +8,13 @@ import os
 import requests
 from bs4 import BeautifulSoup
 from urllib.parse import urljoin, urlparse
-# import spacy
-import openai
 import json
 from textblob import TextBlob
+import cohere
 
-# Initialize Spacy NLP model and OpenAI API
-# nlp = spacy.load("en_core_web_sm")
-openai.api_key = os.getenv("OPENAI_API_KEY")  # Ensure your API key is set in environment variables
+# Initialize the Cohere client
+cohere_api_key = "PqaHJXfKE4ZOJx9plxcRk0xirubw8bGjFq17Y35N"
+co = cohere.Client(cohere_api_key)
 
 app = Flask(__name__, static_folder="static", template_folder="templates")
 CORS(app)
@@ -30,7 +29,7 @@ def add_cors_headers(response):
 
 Global_data = ""
 process_log = []  # To store function call logs
-qa_pairs_json = ""
+qa_pairs_json = "[]"
 
 # Log function calls for dynamic frontend display
 def log_function_call(func_name, status="Started", data=None):
@@ -82,88 +81,81 @@ def index():
 def process():
     return render_template('process.html')
 
-# Function to send chunk to Azure OpenAI for processing
+def generate_response(prompt, max_tokens):
+    """
+    Generates a response using the Cohere API.
+    """
+    try:
+        response = co.generate(
+            model="command-r-plus",
+            prompt=prompt,
+            max_tokens=max_tokens,
+            temperature=0.7,
+        )
+        return response.generations[0].text.strip()
+    except Exception as e:
+        print("Error:", e)
+        return None
+
+# Function to send chunk to Cohere for processing
 def send_chunk_to_LLM(chunk):
-    global qa_pairs_json  # Specify that we are using the global variable
+    global qa_pairs_json
 
-    # Replace with your actual Azure OpenAI API key and endpoint
-    API_KEY = "ca4f7fa7152749218fa8462c3a60aeea"
-    ENDPOINT = "https://khazi18gpt.openai.azure.com/openai/deployments/Khazi18GPT/chat/completions?api-version=2024-02-15-preview"
+    prompt = (
+        f"You are an AI assistant that generates question-answer pairs based on the content provided. "
+        "Generate as many question-answer pairs as possible from the given content. "
+        "The answers should be descriptive but not excessively long, providing clear and concise explanations. "
+        "Respond only in JSON format, strictly in the following structure: "
+        "[{'question': 'Your question?', 'answer': 'A descriptive yet concise answer.'}, ...]. "
+        "Do not include any text outside the JSON. "
+        f"\n\nContent: {chunk}"
+    )
 
-    headers = {
-        "Content-Type": "application/json",
-        "api-key": API_KEY,
-    }
+    max_retries = 5
+    backoff_factor = 2
 
-    payload = {
-        "messages": [
-            {
-                "role": "system",
-                "content": (
-                    "You are an AI assistant that generates question-answer pairs in JSON format only. "
-                    "Each answer should be a single word. Generate no more than 5 questions and answers "
-                    "based on the provided content. Respond in JSON format without any additional text. "
-                    "Format the output as [{'question': 'Your question?', 'answer': 'Answer'}]."
-                )
-            },
-            {
-                "role": "user",
-                "content": f"Generate questions and answers in JSON format for this text: {chunk}"
-            }
-        ],
-        "temperature": 0.5,
-        "top_p": 0.9,
-        "max_tokens": 150
-    }
-
-    retry_count = 0
-    max_retries = 5  # Number of retries
-    backoff_factor = 2  # Exponential backoff factor
-
-    while retry_count < max_retries:
+    for retry_count in range(max_retries):
         try:
-            response = requests.post(ENDPOINT, headers=headers, json=payload)
-            response.raise_for_status()
-            response_data = response.json()
-            content = response_data["choices"][0]["message"]["content"]
-            print(content)
+            # Send the prompt to the API
+            content = generate_response(prompt, max_tokens=1000)
+            print("Raw content from Cohere API:", content)
 
-            # Load the new response content into a list
+            # Validate and fix JSON if needed
             try:
+                # Try to parse the content as JSON
                 new_qa_pairs = json.loads(content)
             except json.JSONDecodeError:
-                print("Error: Could not parse the output as JSON.")
-                return "[]"
+                # Attempt to fix common issues (e.g., unclosed strings)
+                print("Malformed JSON detected. Attempting to fix...")
+                fixed_content = content.strip().rstrip(",}") + "}"
+                try:
+                    new_qa_pairs = json.loads(fixed_content)
+                except json.JSONDecodeError:
+                    raise ValueError("Failed to parse JSON after attempting to fix.")
 
-            # Load existing data from qa_pairs_json if present, else initialize with an empty list
-            existing_qa_pairs = json.loads(qa_pairs_json) if qa_pairs_json else []
-
-            # Append the new data
+            # Merge with existing QA pairs
+            existing_qa_pairs = json.loads(qa_pairs_json) if qa_pairs_json != "[]" else []
             existing_qa_pairs.extend(new_qa_pairs)
 
-            # Update the global variable with the combined data
-            qa_pairs_json = json.dumps(existing_qa_pairs)
-
+            # Update the global QA pairs JSON
+            qa_pairs_json = json.dumps(existing_qa_pairs, indent=2)
             return qa_pairs_json
 
-        except requests.RequestException as e:
-            if response.status_code == 429:  # Too Many Requests
-                retry_count += 1
-                wait_time = backoff_factor ** retry_count
-                print(f"Rate limit hit. Retrying in {wait_time} seconds...")
+        except Exception as e:
+            print(f"Error: {e}")
+            if retry_count < max_retries - 1:
+                wait_time = backoff_factor ** (retry_count + 1)
+                print(f"Retrying in {wait_time} seconds...")
                 time.sleep(wait_time)
             else:
-                log_function_call("send_chunk_to_LLM", f"Error: {e}")
                 qa_pairs_json = json.dumps({"error": f"Error communicating with LLM: {e}"})
                 return qa_pairs_json
 
-    # If retries are exhausted, return an error message
-    qa_pairs_json = json.dumps({"error": "Rate limit exceeded. Please try again later."})
+    qa_pairs_json = json.dumps({"error": "Unable to generate a response. Please try again later."})
     return qa_pairs_json
 
 @app.route('/upload_file', methods=['POST'])
 def upload_file():
-    print(request.files)  # Log incoming files
     if 'file' not in request.files:
         log_function_call("upload_file", "Error: No file part")
         return jsonify({"error": "No file part"}), 400
@@ -190,12 +182,6 @@ def upload_file():
         return jsonify({"error": Global_data}), 500
 
     log_function_call("NLP_processing", "Started")
-    """
-    doc = nlp(Global_data)
-    sentences = [sent.text for sent in doc.sents]
-    chunk_size = 4
-    chunks = [''.join(sentences[i:i+chunk_size]) for i in range(0, len(sentences), chunk_size)]
-    """
     # Create a TextBlob object
     blob = TextBlob(Global_data)
     # Split text into sentences (chunks)
@@ -211,13 +197,6 @@ def upload_file():
     log_function_call("NLP_processing", "Completed")
 
     log_function_call("sending_chunk_to_LLM", "Started")
-    """
-    for i, chunk in enumerate(chunks):
-        print(f"Chunk{i+1}:\n{chunk}\n")
-        response = send_chunk_to_LLM(chunk)
-        responses.append(response)
-        time.sleep(20)
-    """
     for i, chunk in enumerate(chunks, start=1):
         print(f"Chunk {i}: {chunk}")
         response = send_chunk_to_LLM(chunk)
@@ -291,12 +270,7 @@ def extract_webpage():
         return jsonify({"error": "Unable to retrieve webpage content"}), 500
     
     log_function_call("NLP_processing", "Started")
-    """
-    doc = nlp(Global_data)
-    sentences = [sent.text for sent in doc.sents]
-    chunk_size = 4
-    chunks = [''.join(sentences[i:i+chunk_size]) for i in range(0, len(sentences), chunk_size)]
-    """
+
     # Create a TextBlob object
     blob = TextBlob(Global_data)
     # Split text into sentences (chunks)
@@ -312,13 +286,7 @@ def extract_webpage():
     log_function_call("NLP_processing", "Completed")
 
     log_function_call("sending_chunk_to_LLM", "Started")
-    """
-    for i, chunk in enumerate(chunks):
-        print(f"Chunk{i+1}:\n{chunk}\n")
-        response = send_chunk_to_LLM(chunk)
-        responses.append(response)
-        time.sleep(20)
-    """
+
     for i, chunk in enumerate(chunks, start=1):
         print(f"Chunk {i}: {chunk}")
         response = send_chunk_to_LLM(chunk)
@@ -406,5 +374,5 @@ def page_not_found(e):
 def internal_server_error(e):
     return jsonify({"error": "Internal server error"}), 500
 
-if __name__ == "__main__":
-    app.run(host='0.0.0.0', port=5000)
+if __name__ == '__main__':
+    app.run(host="127.0.0.1", port=5000, debug=True)
