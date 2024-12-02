@@ -16,7 +16,9 @@ import cohere
 cohere_api_key = "PqaHJXfKE4ZOJx9plxcRk0xirubw8bGjFq17Y35N"
 co = cohere.Client(cohere_api_key)
 
-app = Flask(__name__, static_folder="static", template_folder="templates")
+# app = Flask(__name__, static_folder="static", template_folder="templates")
+app = Flask(__name__, static_folder="../static", template_folder=".")
+
 CORS(app)
 
 # Add CORS headers to all responses to handle cross-origin requests
