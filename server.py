@@ -279,14 +279,11 @@ def extract_webpage():
     chunk_size = 5
     # Create chunks by grouping sentences into chunks of specified size
     chunks = [' '.join(str(sentence) for sentence in sentences[i:i+chunk_size]) for i in range(0, len(sentences), chunk_size)]
-    print(chunks)
-    print("\n")
-    print(len(chunks))
     responses = []
     log_function_call("NLP_processing", "Completed")
 
-    log_function_call("sending_chunk_to_LLM", "Started")
 
+    log_function_call("sending_chunk_to_LLM", "Started")
     for i, chunk in enumerate(chunks, start=1):
         print(f"Chunk {i}: {chunk}")
         response = send_chunk_to_LLM(chunk)
@@ -375,4 +372,4 @@ def internal_server_error(e):
     return jsonify({"error": "Internal server error"}), 500
 
 if __name__ == '__main__':
-    app.run(host="127.0.0.1", port=5000, debug=True)
+    app.run(host="0.0.0.0", port=5000, debug=True)
