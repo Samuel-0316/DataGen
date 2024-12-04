@@ -193,9 +193,6 @@ def upload_file():
     chunk_size = 5
     # Create chunks by grouping sentences into chunks of specified size
     chunks = [' '.join(str(sentence) for sentence in sentences[i:i+chunk_size]) for i in range(0, len(sentences), chunk_size)]
-    print(chunks)
-    print("\n")
-    print(len(chunks))
     responses = []
     log_function_call("NLP_processing", "Completed")
 
@@ -204,7 +201,7 @@ def upload_file():
         print(f"Chunk {i}: {chunk}")
         response = send_chunk_to_LLM(chunk)
         responses.append(response)
-        time.sleep(10)
+        time.sleep(3)
     log_function_call("sending_chunk_to_LLM", "Completed")
 
     log_function_call("Successfully sent all chunks to LLM", "Completed")
@@ -291,7 +288,7 @@ def extract_webpage():
         print(f"Chunk {i}: {chunk}")
         response = send_chunk_to_LLM(chunk)
         responses.append(response)
-        time.sleep(10)
+        time.sleep(3)
     log_function_call("sending_chunk_to_LLM", "Completed")
 
     log_function_call("Successfully sent all chunks to LLM", "Completed")
@@ -336,7 +333,7 @@ def crawl_webpage():
             print(f"Chunk {i}: {chunk}")
             response = send_chunk_to_LLM(chunk)
             responses.append(response)
-            time.sleep(10)  # Add a delay if necessary
+            time.sleep(3)
         log_function_call("sending_chunk_to_LLM", "Completed")
 
         log_function_call("crawl_webpage", "Successfully sent all chunks to LLM", "Completed")
