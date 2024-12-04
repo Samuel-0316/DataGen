@@ -138,7 +138,7 @@ def send_chunk_to_LLM(chunk):
 
     # Call the optimized generate_response function
     content = generate_response(prompt, max_tokens=500)
-    print(content)
+    # print(content)
 
     if content is None:
         qa_pairs_json = json.dumps({"error": "Failed to get a valid response from LLM."})
