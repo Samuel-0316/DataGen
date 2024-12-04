@@ -13,7 +13,14 @@ from textblob import TextBlob
 import cohere
 import nltk
 
+# Specify the directory where you want to store nltk_data
 nltk.data.path.append('./nltk_data')
+
+# Download required resources
+nltk.download('punkt', download_dir='./nltk_data')
+nltk.download('punkt_tab', download_dir='./nltk_data')
+nltk.download('averaged_perceptron_tagger', download_dir='./nltk_data')
+nltk.download('wordnet', download_dir='./nltk_data')
 
 # Initialize the Cohere client
 cohere_api_key = "PqaHJXfKE4ZOJx9plxcRk0xirubw8bGjFq17Y35N"
