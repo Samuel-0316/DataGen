@@ -13,9 +13,7 @@ from textblob import TextBlob
 import cohere
 import nltk
 
-# Download required resources
-nltk.download('punkt', download_dir='./nltk_data')
-nltk.download('punkt_tab', download_dir='./nltk_data')
+nltk.data.path.append('./nltk_data')
 
 # Initialize the Cohere client
 cohere_api_key = "PqaHJXfKE4ZOJx9plxcRk0xirubw8bGjFq17Y35N"
