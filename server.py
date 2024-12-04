@@ -12,6 +12,7 @@ import json
 from textblob import TextBlob
 import cohere
 import nltk
+from requests.exceptions import Timeout
 
 nltk.data.path.append('./nltk_data')
 
@@ -84,21 +85,42 @@ def index():
 def process():
     return render_template('process.html')
 
-def generate_response(prompt, max_tokens):
+def generate_response(prompt, max_tokens, max_retries=3, backoff_factor=2):
     """
-    Generates a response using the Cohere API.
+    Generates a response using the Cohere API with retry mechanism for timeout handling.
     """
-    try:
-        response = co.generate(
-            model="command-r-plus",
-            prompt=prompt,
-            max_tokens=max_tokens,
-            temperature=0.7,
-        )
-        return response.generations[0].text.strip()
-    except Exception as e:
-        print("Error:", e)
-        return None
+    attempt = 0
+    while attempt < max_retries:
+        try:
+            # Start timing the request
+            start_time = time.time()
+            
+            # Call the Cohere API
+            response = co.generate(
+                model="command-r-plus",
+                prompt=prompt,
+                max_tokens=max_tokens,
+                temperature=0.7,
+            )
+            
+            # Check if response was received in under 10 seconds
+            elapsed_time = time.time() - start_time
+            if elapsed_time > 10:
+                raise TimeoutError("Response exceeded 10 seconds.")
+            
+            return response.generations[0].text.strip()
+
+        except TimeoutError as e:
+            print(f"Timeout occurred: {e}. Retrying {attempt + 1}/{max_retries}...")
+        except Exception as e:
+            print(f"Error: {e}. Retrying {attempt + 1}/{max_retries}...")
+
+        # Exponential backoff for retries
+        attempt += 1
+        time.sleep(backoff_factor ** attempt)
+
+    print("Max retries reached. Could not get a response in time.")
+    return None
 
 # Function to send chunk to Cohere for processing
 def send_chunk_to_LLM(chunk):
@@ -114,47 +136,34 @@ def send_chunk_to_LLM(chunk):
         f"\n\nContent: {chunk}"
     )
 
-    max_retries = 5
-    backoff_factor = 2
+    # Call the optimized generate_response function
+    content = generate_response(prompt, max_tokens=500)
+    print(content)
 
-    for retry_count in range(max_retries):
+    if content is None:
+        qa_pairs_json = json.dumps({"error": "Failed to get a valid response from LLM."})
+        return qa_pairs_json
+
+    # Validate and fix JSON if needed
+    try:
+        # Try to parse the content as JSON
+        new_qa_pairs = json.loads(content)
+    except json.JSONDecodeError:
+        # Attempt to fix common issues (e.g., unclosed strings)
+        print("Malformed JSON detected. Attempting to fix...")
+        fixed_content = content.strip().rstrip(",}") + "}"
         try:
-            # Send the prompt to the API
-            content = generate_response(prompt, max_tokens=1000)
-            print("Raw content from Cohere API:", content)
-
-            # Validate and fix JSON if needed
-            try:
-                # Try to parse the content as JSON
-                new_qa_pairs = json.loads(content)
-            except json.JSONDecodeError:
-                # Attempt to fix common issues (e.g., unclosed strings)
-                print("Malformed JSON detected. Attempting to fix...")
-                fixed_content = content.strip().rstrip(",}") + "}"
-                try:
-                    new_qa_pairs = json.loads(fixed_content)
-                except json.JSONDecodeError:
-                    raise ValueError("Failed to parse JSON after attempting to fix.")
-
-            # Merge with existing QA pairs
-            existing_qa_pairs = json.loads(qa_pairs_json) if qa_pairs_json != "[]" else []
-            existing_qa_pairs.extend(new_qa_pairs)
-
-            # Update the global QA pairs JSON
-            qa_pairs_json = json.dumps(existing_qa_pairs, indent=2)
+            new_qa_pairs = json.loads(fixed_content)
+        except json.JSONDecodeError:
+            qa_pairs_json = json.dumps({"error": "Failed to parse JSON after attempting to fix."})
             return qa_pairs_json
 
-        except Exception as e:
-            print(f"Error: {e}")
-            if retry_count < max_retries - 1:
-                wait_time = backoff_factor ** (retry_count + 1)
-                print(f"Retrying in {wait_time} seconds...")
-                time.sleep(wait_time)
-            else:
-                qa_pairs_json = json.dumps({"error": f"Error communicating with LLM: {e}"})
-                return qa_pairs_json
+    # Merge with existing QA pairs
+    existing_qa_pairs = json.loads(qa_pairs_json) if qa_pairs_json != "[]" else []
+    existing_qa_pairs.extend(new_qa_pairs)
 
-    qa_pairs_json = json.dumps({"error": "Unable to generate a response. Please try again later."})
+    # Update the global QA pairs JSON
+    qa_pairs_json = json.dumps(existing_qa_pairs, indent=2)
     return qa_pairs_json
 
 @app.route('/upload_file', methods=['POST'])
@@ -190,7 +199,7 @@ def upload_file():
     # Split text into sentences (chunks)
     sentences = blob.sentences
     # Define chunk size (number of sentences per chunk)
-    chunk_size = 5
+    chunk_size = 3
     # Create chunks by grouping sentences into chunks of specified size
     chunks = [' '.join(str(sentence) for sentence in sentences[i:i+chunk_size]) for i in range(0, len(sentences), chunk_size)]
     responses = []
@@ -276,7 +285,7 @@ def extract_webpage():
     # Split text into sentences (chunks)
     sentences = blob.sentences
     # Define chunk size (number of sentences per chunk)
-    chunk_size = 5
+    chunk_size = 3
     # Create chunks by grouping sentences into chunks of specified size
     chunks = [' '.join(str(sentence) for sentence in sentences[i:i+chunk_size]) for i in range(0, len(sentences), chunk_size)]
     responses = []
@@ -321,7 +330,7 @@ def crawl_webpage():
         
         blob = TextBlob(Global_data)
         sentences = blob.sentences
-        chunk_size = 5
+        chunk_size = 3
         chunks = [' '.join(str(sentence) for sentence in sentences[i:i+chunk_size]) for i in range(0, len(sentences), chunk_size)]
         
         responses = []
