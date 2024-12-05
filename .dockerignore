@@ -1,0 +1,5 @@
+*.pyc
+__pycache__/
+.env
+chv/        # Exclude the Python virtual environment
+.gitignore  # Exclude the .gitignore file
