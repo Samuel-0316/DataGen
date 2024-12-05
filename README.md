@@ -30,4 +30,45 @@ Developed with an intuitive interface, DataGen allows users to easily collect an
 
 ---
 
+# DataGen App Dockerized
+## Prerequisites
+Before you begin, make sure you have the following installed:
+
+-> Docker: Ensure Docker Desktop is installed and running on your machine.
+
+## Clone the Repository
+To clone this repository to your local machine, run the following command:<br>
+```git clone https://github.com/yourusername/datagen.git```<br>
+```cd datagen```
+
+## Building the Docker Image
+Once you have cloned the repository, you can build the Docker image. This step will install all dependencies listed in requirements.txt inside a container.<br>
+
+Open a terminal and navigate to the project directory.<br>
+Run the following command to build the Docker image:<be>
+```docker build -t datagen .```<be>
+
+## Running the Application
+To run the Dockerized Flask app, execute the following command:<br>
+```docker run -p 5000:5000 datagen```<br>
+
+Once the container starts, you can open your browser and navigate to:<br>
+```http://localhost:5000```<br>
+
+## Stopping the Application
+If you want to stop the running Docker container, first, find the container ID:<br>
+```docker ps```<br>
+
+# Contributing
+If you would like to contribute to this project, please follow these steps:<br>
+
+-> Fork the repository.<br>
+-> Clone your fork and create a new branch.<br>
+-> Make your changes and test them.<br>
+-> Open a pull request to the main repository.<br>
+
+
 **Note**: DataGen supports the generation of datasets from a combination of sources, including both files and website content, ensuring flexibility and comprehensiveness in data gathering.
+
+# License
+This project is licensed under the MIT License - see the LICENSE file for details.
