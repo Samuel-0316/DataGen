@@ -85,7 +85,7 @@ def index():
 def process():
     return render_template('process.html')
 
-def generate_response(prompt, max_tokens, max_retries=3, backoff_factor=2):
+def generate_response(prompt, max_tokens, max_retries=5, backoff_factor=2):
     """
     Generates a response using the Cohere API with retry mechanism for timeout handling.
     """
@@ -138,7 +138,7 @@ def send_chunk_to_LLM(chunk):
 
     # Call the optimized generate_response function
     content = generate_response(prompt, max_tokens=500)
-    # print(content)
+    print(content)
 
     if content is None:
         qa_pairs_json = json.dumps({"error": "Failed to get a valid response from LLM."})
@@ -199,7 +199,7 @@ def upload_file():
     # Split text into sentences (chunks)
     sentences = blob.sentences
     # Define chunk size (number of sentences per chunk)
-    chunk_size = 3
+    chunk_size = 5
     # Create chunks by grouping sentences into chunks of specified size
     chunks = [' '.join(str(sentence) for sentence in sentences[i:i+chunk_size]) for i in range(0, len(sentences), chunk_size)]
     responses = []
