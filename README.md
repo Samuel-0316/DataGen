@@ -1,6 +1,8 @@
 # Datagen: Automated Dataset Generation Tool
 
 ## Overview
+One of the biggest challenges in fine-tuning LLMs is finding the right dataset. While we have massive amounts of data available in the form of websites, files, and other sources, we can’t directly use them for training. LLMs require structured, supervised data, which is where this project comes in. DataGen simplifies this process by transforming raw, unstructured data into a well-formatted dataset—creating supervised Q&A pairs that make it ideal for training. It turns what was once a nightmare into an effortless task.
+
 Datagen is a powerful web application designed to automate the generation of structured datasets in a Q&A format Specially, for fine tuining large language models. It processes raw text from various sources, utilizes LLMs to generate contextual question-answer pairs, and outputs well-formatted datasets for AI model fine-tuning and analysis.
 
 ## Features
