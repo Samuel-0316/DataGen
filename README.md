@@ -1,7 +1,7 @@
 # Datagen: Automated Dataset Generation Tool
 
 ## Overview
-Datagen is a powerful web application designed to automate the generation of structured datasets in a Q&A format. It processes raw text from various sources, utilizes LLMs to generate contextual question-answer pairs, and outputs well-formatted datasets for AI model fine-tuning and analysis.
+Datagen is a powerful web application designed to automate the generation of structured datasets in a Q&A format Specially, for fine tuining large language models. It processes raw text from various sources, utilizes LLMs to generate contextual question-answer pairs, and outputs well-formatted datasets for AI model fine-tuning and analysis.
 
 ## Features
 - **Multi-format Input**: Accepts PDFs, DOCs, plain text, and website links via an integrated web crawler.
