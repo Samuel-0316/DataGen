@@ -1,6 +1,6 @@
 # Required imports and configurations
 import time
-from flask import Flask, request, jsonify, render_template
+from flask import Flask, request, jsonify, render_template, send_file
 from flask_cors import CORS
 import PyPDF2
 import docx
@@ -13,6 +13,7 @@ from textblob import TextBlob
 import cohere
 import nltk
 from requests.exceptions import Timeout
+import csv
 
 nltk.data.path.append('./nltk_data')
 
@@ -141,26 +142,45 @@ def send_chunk_to_LLM(chunk):
     print(content)
 
     if content is None:
-        qa_pairs_json = json.dumps({"error": "Failed to get a valid response from LLM."})
-        return qa_pairs_json
+        return json.dumps({"error": "Failed to get a valid response from LLM."})
 
     # Validate and fix JSON if needed
     try:
-        # Try to parse the content as JSON
         new_qa_pairs = json.loads(content)
-    except json.JSONDecodeError:
-        # Attempt to fix common issues (e.g., unclosed strings)
+        if not isinstance(new_qa_pairs, list):
+            raise ValueError("Parsed JSON is not a list")
+    except (json.JSONDecodeError, ValueError):
         print("Malformed JSON detected. Attempting to fix...")
         fixed_content = content.strip().rstrip(",}") + "}"
         try:
             new_qa_pairs = json.loads(fixed_content)
-        except json.JSONDecodeError:
-            qa_pairs_json = json.dumps({"error": "Failed to parse JSON after attempting to fix."})
-            return qa_pairs_json
+            if not isinstance(new_qa_pairs, list):
+                raise ValueError("Parsed JSON is not a list")
+        except (json.JSONDecodeError, ValueError) as e:
+            error_msg = f"Failed to parse JSON after attempting to fix: {e}"
+            print(error_msg)
+            return json.dumps({"error": error_msg})
+
+    # Ensure new_qa_pairs is a list
+    if isinstance(new_qa_pairs, dict):
+        new_qa_pairs = [new_qa_pairs]
 
     # Merge with existing QA pairs
-    existing_qa_pairs = json.loads(qa_pairs_json) if qa_pairs_json != "[]" else []
-    existing_qa_pairs.extend(new_qa_pairs)
+    existing_qa_pairs = []
+    if qa_pairs_json and qa_pairs_json != "[]":
+        try:
+            existing_qa_pairs = json.loads(qa_pairs_json)
+            if not isinstance(existing_qa_pairs, list):
+                existing_qa_pairs = []
+        except json.JSONDecodeError:
+            existing_qa_pairs = []
+
+    # Ensure new_qa_pairs is a list before extending
+    if isinstance(new_qa_pairs, list):
+        existing_qa_pairs.extend(new_qa_pairs)
+    else:
+        print(f"Unexpected new_qa_pairs type: {type(new_qa_pairs)}")
+        existing_qa_pairs.append(new_qa_pairs)
 
     # Update the global QA pairs JSON
     qa_pairs_json = json.dumps(existing_qa_pairs, indent=2)
@@ -216,10 +236,6 @@ def upload_file():
     log_function_call("Successfully sent all chunks to LLM", "Completed")
 
     return jsonify({"text": Global_data, "chunks": chunks, "model_responses": responses}), 200
-
-# The rest of the code remains the same as provided.
-
-#----------------------------------------------------------------------
 
 # Webpage and Website Crawling Functions
 def extract_data_from_webpage(url):
@@ -290,7 +306,6 @@ def extract_webpage():
     chunks = [' '.join(str(sentence) for sentence in sentences[i:i+chunk_size]) for i in range(0, len(sentences), chunk_size)]
     responses = []
     log_function_call("NLP_processing", "Completed")
-
 
     log_function_call("sending_chunk_to_LLM", "Started")
     for i, chunk in enumerate(chunks, start=1):
@@ -372,6 +387,36 @@ def get_qa_pairs():
     global qa_pairs_json
     return jsonify({"qa_pairs": qa_pairs_json}), 200
 
+# Function to generate CSV from QA pairs
+def generate_csv_from_qa_pairs(qa_pairs):
+    csv_filename = "qa_pairs.csv"
+    try:
+        with open(csv_filename, mode='w', newline='', encoding='utf-8') as csv_file:
+            fieldnames = ['question', 'answer']
+            writer = csv.DictWriter(csv_file, fieldnames=fieldnames)
+            writer.writeheader()
+            for pair in qa_pairs:
+                writer.writerow({'question': pair['question'], 'answer': pair['answer']})
+        return csv_filename
+    except Exception as e:
+        log_function_call("generate_csv_from_qa_pairs", f"Error: {e}")
+        return None
+
+# Endpoint to download the CSV file
+@app.route('/download_csv', methods=['GET'])
+def download_csv():
+    global qa_pairs_json
+    try:
+        qa_pairs = json.loads(qa_pairs_json)
+        csv_filename = generate_csv_from_qa_pairs(qa_pairs)
+        if csv_filename:
+            return send_file(csv_filename, as_attachment=True)
+        else:
+            return jsonify({"error": "Failed to generate CSV file"}), 500
+    except Exception as e:
+        log_function_call("download_csv", f"Error: {e}")
+        return jsonify({"error": "An error occurred while generating the CSV file"}), 500
+
 @app.errorhandler(404)
 def page_not_found(e):
     return jsonify({"error": "Resource not found"}), 404
@@ -381,4 +426,4 @@ def internal_server_error(e):
     return jsonify({"error": "Internal server error"}), 500
 
 if __name__ == '__main__':
-    app.run(host="0.0.0.0", port=5000, debug=True)
+    app.run(host="0.0.0.0", port=5001, debug=True)
