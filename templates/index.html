@@ -274,7 +274,6 @@
             const numberInput = document.getElementById("numberInput").value; // Get number input if needed
 
             if (userInput) {
-                navigateToTerminal();
                 try {
                     const response = await fetch("http://127.0.0.1:5001/extract_webpage", {
                         method: "POST",
@@ -285,6 +284,12 @@
                     const result = await response.json();
                     if (result.error) {
                         document.getElementById("result").textContent = result.error;
+                    }
+                    else {
+                        navigateToTerminal();
+                        // Optionally, you can display a success message or handle the result here
+                        showAlert("Data extraction completed successfully!", "info");
+                        console.log(result); // Log the result for debugging
                     }
                 }
                 catch (error) {
@@ -302,7 +307,6 @@
             const pages = document.getElementById("numberInput").value || 1; // Default to 1 if pages is empty
 
             if (userInput) {
-                navigateToTerminal();
                 try {
                     const response = await fetch("http://127.0.0.1:5001/crawl_webpage", {
                         method: "POST",
@@ -313,6 +317,12 @@
                     const result = await response.json();
                     if (result.error) {
                         document.getElementById("result").textContent = result.error;
+                    }
+                    else {
+                        navigateToTerminal();
+                        // Optionally, you can display a success message or handle the result here
+                        showAlert("Crawling completed successfully!", "info");
+                        console.log(result); // Log the result for debugging
                     }
                 } catch (error) {
                     document.getElementById("result").textContent = "An error occurred during website crawling.";

@@ -286,7 +286,7 @@ def crawl_website(start_url, max_pages=50):
 def extract_webpage():
     data = request.json
     url = data.get('url')
-
+    print("URL:\n\n\n", url)
     if not url or not is_valid_url(url):
         return jsonify({"error": "Valid URL is required"}), 400
 
@@ -328,6 +328,7 @@ def crawl_webpage():
         data = request.json
         start_url = data.get('url')
         max_pages = int(data.get('max_pages', 50))
+        print("start_URL:\n\n\n", start_url)
 
         # Check if URL is provided and valid
         if not start_url or not is_valid_url(start_url):
@@ -427,3 +428,4 @@ def internal_server_error(e):
 
 if __name__ == '__main__':
     app.run(host="0.0.0.0", port=5001, debug=True)
+    print("json  qa ............", qa_pairs_json)
