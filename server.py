@@ -14,11 +14,15 @@ import cohere
 import nltk
 from requests.exceptions import Timeout
 import csv
+from dotenv import load_dotenv
+import os
+
+load_dotenv()
 
 nltk.data.path.append('./nltk_data')
 
 # Initialize the Cohere client
-cohere_api_key = "PqaHJXfKE4ZOJx9plxcRk0xirubw8bGjFq17Y35N"
+cohere_api_key = os.getenv('API_KEY')
 co = cohere.Client(cohere_api_key)
 
 app = Flask(__name__, static_folder="static", template_folder="templates")
