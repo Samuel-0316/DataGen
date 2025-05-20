@@ -36,8 +36,12 @@ def add_cors_headers(response):
     response.headers['Access-Control-Allow-Headers'] = 'Content-Type, Authorization'
     return response
 
-# Log function calls for dynamic frontend display (now per-request)
-def log_function_call(process_log, func_name, status="Started", data=None):
+Global_data = ""
+process_log = []  # To store function call logs
+qa_pairs_json = "[]"
+
+# Log function calls for dynamic frontend display
+def log_function_call(func_name, status="Started", data=None):
     entry = {"function": func_name, "status": status}
     if data:
         entry["data"] = data  # Include data in the log if provided
@@ -126,9 +130,9 @@ def generate_response(prompt, max_tokens, max_retries=5, backoff_factor=2):
     return None
 
 # Function to send chunk to Cohere for processing
-# Now takes qa_pairs_list as argument and returns updated list
+def send_chunk_to_LLM(chunk):
+    global qa_pairs_json
 
-def send_chunk_to_LLM(chunk, qa_pairs_list):
     prompt = (
         f"You are an AI assistant that generates question-answer pairs based on the content provided. "
         "Generate as many question-answer pairs as possible from the given content. "
@@ -139,11 +143,12 @@ def send_chunk_to_LLM(chunk, qa_pairs_list):
         f"\n\nContent: {chunk}"
     )
 
+    # Call the optimized generate_response function
     content = generate_response(prompt, max_tokens=500)
     print(content)
 
     if content is None:
-        return qa_pairs_list, json.dumps({"error": "Failed to get a valid response from LLM."})
+        return json.dumps({"error": "Failed to get a valid response from LLM."})
 
     # Validate and fix JSON if needed
     try:
@@ -160,31 +165,42 @@ def send_chunk_to_LLM(chunk, qa_pairs_list):
         except (json.JSONDecodeError, ValueError) as e:
             error_msg = f"Failed to parse JSON after attempting to fix: {e}"
             print(error_msg)
-            return qa_pairs_list, json.dumps({"error": error_msg})
+            return json.dumps({"error": error_msg})
 
     # Ensure new_qa_pairs is a list
     if isinstance(new_qa_pairs, dict):
         new_qa_pairs = [new_qa_pairs]
 
     # Merge with existing QA pairs
+    existing_qa_pairs = []
+    if qa_pairs_json and qa_pairs_json != "[]":
+        try:
+            existing_qa_pairs = json.loads(qa_pairs_json)
+            if not isinstance(existing_qa_pairs, list):
+                existing_qa_pairs = []
+        except json.JSONDecodeError:
+            existing_qa_pairs = []
+
+    # Ensure new_qa_pairs is a list before extending
     if isinstance(new_qa_pairs, list):
-        qa_pairs_list.extend(new_qa_pairs)
+        existing_qa_pairs.extend(new_qa_pairs)
     else:
         print(f"Unexpected new_qa_pairs type: {type(new_qa_pairs)}")
-        qa_pairs_list.append(new_qa_pairs)
+        existing_qa_pairs.append(new_qa_pairs)
 
-    return qa_pairs_list, json.dumps(qa_pairs_list, indent=2)
+    # Update the global QA pairs JSON
+    qa_pairs_json = json.dumps(existing_qa_pairs, indent=2)
+    return qa_pairs_json
 
 @app.route('/upload_file', methods=['POST'])
 def upload_file():
-    process_log = []
     if 'file' not in request.files:
-        log_function_call(process_log, "upload_file", "Error: No file part")
+        log_function_call("upload_file", "Error: No file part")
         return jsonify({"error": "No file part"}), 400
     file = request.files['file']
 
     if file.filename == '':
-        log_function_call(process_log, "upload_file", "Error: No selected file")
+        log_function_call("upload_file", "Error: No selected file")
         return jsonify({"error": "No selected file"}), 400
 
     file_extension = os.path.splitext(file.filename)[1].lower()
@@ -196,33 +212,36 @@ def upload_file():
     elif file_extension == '.txt':
         Global_data = extract_text_from_txt(file)
     else:
-        log_function_call(process_log, "upload_file", "Error: Unsupported file format")
+        log_function_call("upload_file", "Error: Unsupported file format")
         return jsonify({"error": "Unsupported file format"}), 400
 
     if Global_data.startswith("Error"):
-        log_function_call(process_log, "upload_file", f"Error in text extraction")
+        log_function_call("upload_file", f"Error in text extraction")
         return jsonify({"error": Global_data}), 500
 
-    log_function_call(process_log, "NLP_processing", "Started")
+    log_function_call("NLP_processing", "Started")
+    # Create a TextBlob object
     blob = TextBlob(Global_data)
+    # Split text into sentences (chunks)
     sentences = blob.sentences
+    # Define chunk size (number of sentences per chunk)
     chunk_size = 5
+    # Create chunks by grouping sentences into chunks of specified size
     chunks = [' '.join(str(sentence) for sentence in sentences[i:i+chunk_size]) for i in range(0, len(sentences), chunk_size)]
     responses = []
-    qa_pairs_list = []
-    log_function_call(process_log, "NLP_processing", "Completed")
+    log_function_call("NLP_processing", "Completed")
 
-    log_function_call(process_log, "sending_chunk_to_LLM", "Started")
+    log_function_call("sending_chunk_to_LLM", "Started")
     for i, chunk in enumerate(chunks, start=1):
         print(f"Chunk {i}: {chunk}")
-        qa_pairs_list, response = send_chunk_to_LLM(chunk, qa_pairs_list)
+        response = send_chunk_to_LLM(chunk)
         responses.append(response)
         time.sleep(3)
-    log_function_call(process_log, "sending_chunk_to_LLM", "Completed")
+    log_function_call("sending_chunk_to_LLM", "Completed")
 
-    log_function_call(process_log, "Successfully sent all chunks to LLM", "Completed")
+    log_function_call("Successfully sent all chunks to LLM", "Completed")
 
-    return jsonify({"text": Global_data, "chunks": chunks, "model_responses": responses, "qa_pairs": qa_pairs_list, "process_log": process_log}), 200
+    return jsonify({"text": Global_data, "chunks": chunks, "model_responses": responses}), 200
 
 # Webpage and Website Crawling Functions
 def extract_data_from_webpage(url):
@@ -271,7 +290,6 @@ def crawl_website(start_url, max_pages=50):
 
 @app.route('/extract_webpage', methods=['POST'])
 def extract_webpage():
-    process_log = []
     data = request.json
     url = data.get('url')
     print("URL:\n\n\n", url)
@@ -282,65 +300,99 @@ def extract_webpage():
     if Global_data is None:
         return jsonify({"error": "Unable to retrieve webpage content"}), 500
     
-    log_function_call(process_log, "NLP_processing", "Started")
+    log_function_call("NLP_processing", "Started")
+
+    # Create a TextBlob object
     blob = TextBlob(Global_data)
+    # Split text into sentences (chunks)
     sentences = blob.sentences
+    # Define chunk size (number of sentences per chunk)
     chunk_size = 3
+    # Create chunks by grouping sentences into chunks of specified size
     chunks = [' '.join(str(sentence) for sentence in sentences[i:i+chunk_size]) for i in range(0, len(sentences), chunk_size)]
     responses = []
-    qa_pairs_list = []
-    log_function_call(process_log, "NLP_processing", "Completed")
+    log_function_call("NLP_processing", "Completed")
 
-    log_function_call(process_log, "sending_chunk_to_LLM", "Started")
+    log_function_call("sending_chunk_to_LLM", "Started")
     for i, chunk in enumerate(chunks, start=1):
         print(f"Chunk {i}: {chunk}")
-        qa_pairs_list, response = send_chunk_to_LLM(chunk, qa_pairs_list)
+        response = send_chunk_to_LLM(chunk)
         responses.append(response)
         time.sleep(3)
-    log_function_call(process_log, "sending_chunk_to_LLM", "Completed")
+    log_function_call("sending_chunk_to_LLM", "Completed")
 
-    log_function_call(process_log, "Successfully sent all chunks to LLM", "Completed")
+    log_function_call("Successfully sent all chunks to LLM", "Completed")
 
-    return jsonify({"text_content": Global_data, "model_responses": responses, "qa_pairs": qa_pairs_list, "process_log": process_log}), 200
+    return jsonify({"text_content": Global_data, "model_responses": responses}), 200
 
 @app.route('/crawl_webpage', methods=['POST'])
 def crawl_webpage():
-    process_log = []
-    log_function_call(process_log, "crawl_webpage", "Started")
+    log_function_call("crawl_webpage", "Started")
+
     try:
+        # Retrieve URL and max_pages from request data
         data = request.json
         start_url = data.get('url')
         max_pages = int(data.get('max_pages', 50))
         print("start_URL:\n\n\n", start_url)
+
+        # Check if URL is provided and valid
         if not start_url or not is_valid_url(start_url):
-            log_function_call(process_log, "crawl_webpage", "Error: Invalid URL")
-            return jsonify({"error": "Valid URL is required"}), 200
+            log_function_call("crawl_webpage", "Error: Invalid URL")
+            return jsonify({"error": "Valid URL is required"}), 200  # Return 200 with error info
+
+        # Global variable to store crawled data
+        global Global_data
         Global_data, crawled_links = crawl_website(start_url, max_pages)
-        log_function_call(process_log, "crawl_webpage", "Crawling Completed", data={"crawled_links": crawled_links})
-        log_function_call(process_log, "NLP_processing", "Started")
+        
+        log_function_call("crawl_webpage", "Crawling Completed", data={"crawled_links": crawled_links})
+
+        # Process text with NLP and split into chunks
+        log_function_call("NLP_processing", "Started")
+        
         blob = TextBlob(Global_data)
         sentences = blob.sentences
         chunk_size = 3
         chunks = [' '.join(str(sentence) for sentence in sentences[i:i+chunk_size]) for i in range(0, len(sentences), chunk_size)]
+        
         responses = []
-        qa_pairs_list = []
-        log_function_call(process_log, "NLP_processing", "Completed")
-        log_function_call(process_log, "sending_chunk_to_LLM", "Started")
+        log_function_call("NLP_processing", "Completed")
+
+        # Send each chunk to the language model
+        log_function_call("sending_chunk_to_LLM", "Started")
         for i, chunk in enumerate(chunks, start=1):
             print(f"Chunk {i}: {chunk}")
-            qa_pairs_list, response = send_chunk_to_LLM(chunk, qa_pairs_list)
+            response = send_chunk_to_LLM(chunk)
             responses.append(response)
             time.sleep(3)
-        log_function_call(process_log, "sending_chunk_to_LLM", "Completed")
-        log_function_call(process_log, "crawl_webpage", "Successfully sent all chunks to LLM", "Completed")
-        return jsonify({"crawled_content": Global_data, "crawled_links": crawled_links, "model_responses": responses, "qa_pairs": qa_pairs_list, "process_log": process_log}), 200
+        log_function_call("sending_chunk_to_LLM", "Completed")
+
+        log_function_call("crawl_webpage", "Successfully sent all chunks to LLM", "Completed")
+
+        # Return the success response with crawled and processed data
+        return jsonify({"crawled_content": Global_data, "crawled_links": crawled_links, "model_responses": responses}), 200
+
     except Exception as e:
-        log_function_call(process_log, "crawl_webpage", f"Error: {e}")
+        # Handle any exception, log the error, print it, and return a 200 response with error details
+        log_function_call("crawl_webpage", f"Error: {e}")
         print(f"Error occurred in /crawl_webpage: {e}")
         return jsonify({
             "error": "An error occurred while processing the request.",
             "details": str(e)
-        }), 200
+        }), 200  # Custom error message, but with 200 status code
+
+# Endpoint to retrieve log data
+@app.route('/get_process_log', methods=['GET'])
+def get_process_log():
+    log_data = jsonify(process_log)  # Save the log data to be returned
+    process_log.clear()  # Clear the log after saving it
+    return log_data, 200
+
+# Add a new route to get the QA pairs JSON
+@app.route('/get_qa_pairs', methods=['GET'])
+def get_qa_pairs():
+    global qa_pairs_json
+    return jsonify({"qa_pairs": qa_pairs_json}), 200
 
 # Function to generate CSV from QA pairs
 def generate_csv_from_qa_pairs(qa_pairs):
@@ -358,16 +410,18 @@ def generate_csv_from_qa_pairs(qa_pairs):
         return None
 
 # Endpoint to download the CSV file
-@app.route('/download_csv', methods=['POST'])
+@app.route('/download_csv', methods=['GET'])
 def download_csv():
+    global qa_pairs_json
     try:
-        qa_pairs = request.json.get('qa_pairs', [])
+        qa_pairs = json.loads(qa_pairs_json)
         csv_filename = generate_csv_from_qa_pairs(qa_pairs)
         if csv_filename:
             return send_file(csv_filename, as_attachment=True)
         else:
             return jsonify({"error": "Failed to generate CSV file"}), 500
     except Exception as e:
+        log_function_call("download_csv", f"Error: {e}")
         return jsonify({"error": "An error occurred while generating the CSV file"}), 500
 
 @app.errorhandler(404)
@@ -380,3 +434,4 @@ def internal_server_error(e):
 
 if __name__ == '__main__':
     app.run(host="0.0.0.0", port=5001, debug=True)
+    print("json  qa ............", qa_pairs_json)
