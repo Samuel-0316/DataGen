@@ -7,3 +7,4 @@ beautifulsoup4 == 4.12.2
 urllib3 == 2.2.3
 textblob
 cohere
+dotenv
