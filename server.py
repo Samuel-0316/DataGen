@@ -223,16 +223,15 @@ def upload_file():
 
     # Respond immediately after extraction
     log_function_call("text_extraction", "Completed")
-    # Start the rest of the pipeline in a background thread
-    threading.Thread(target=process_pipeline_after_extraction, args=(Global_data,)).start()
+    # Start the rest of the pipeline in a background thread (chunk_size=5 for files)
+    threading.Thread(target=process_pipeline_after_extraction, args=(Global_data, 5)).start()
     return jsonify({"stage": "extracted", "message": "Text extraction completed. Redirect to process page."}), 200
 
-def process_pipeline_after_extraction(Global_data):
+def process_pipeline_after_extraction(Global_data, chunk_size):
     try:
         log_function_call("NLP_processing", "Started")
         blob = TextBlob(Global_data)
         sentences = blob.sentences
-        chunk_size = 5
         chunks = [' '.join(str(sentence) for sentence in sentences[i:i+chunk_size]) for i in range(0, len(sentences), chunk_size)]
         responses = []
         log_function_call("NLP_processing", "Completed")
@@ -247,7 +246,10 @@ def process_pipeline_after_extraction(Global_data):
     except Exception as e:
         log_function_call("pipeline_error", f"Error: {e}")
 
-# Webpage and Website Crawling Functions
+def is_valid_url(url):
+    parsed = urlparse(url)
+    return bool(parsed.scheme in ['http', 'https'])
+
 def extract_data_from_webpage(url):
     log_function_call("extract_data_from_webpage")
     try:
@@ -262,38 +264,9 @@ def extract_data_from_webpage(url):
         log_function_call("extract_data_from_webpage", f"Error: {e}")
         return None, []
 
-def is_valid_url(url):
-    parsed = urlparse(url)
-    return bool(parsed.scheme in ['http', 'https'])
-
-def crawl_website(start_url, max_pages=50):
-    log_function_call("crawl_website")
-    visited = set()
-    to_visit = [start_url]
-    crawled_content = ""
-    crawled_links = []
-
-    while to_visit and len(visited) < max_pages:
-        current_url = to_visit.pop(0)
-        if current_url in visited:
-            continue
-
-        text_content, links = extract_data_from_webpage(current_url)
-        if text_content:
-            crawled_content += text_content + "\n\n"
-
-        for link in links:
-            if link not in visited and link not in to_visit:
-                to_visit.append(link)
-
-        visited.add(current_url)
-        crawled_links.append(current_url)
-
-    log_function_call("crawl_website", "Completed")
-    return crawled_content, crawled_links
-
 @app.route('/extract_webpage', methods=['POST'])
 def extract_webpage():
+    global Global_data
     data = request.json
     url = data.get('url')
     print("URL:\n\n\n", url)
@@ -305,6 +278,8 @@ def extract_webpage():
         return jsonify({"error": "Unable to retrieve webpage content"}), 500
     
     log_function_call("text_extraction", "Completed")
+    # Start the rest of the pipeline in a background thread (chunk_size=3 for webpages)
+    threading.Thread(target=process_pipeline_after_extraction, args=(Global_data, 3)).start()
     return jsonify({"stage": "extracted", "message": "Text extraction completed. Redirect to process page."}), 200
 
     # The following code will not be reached, but kept for reference
@@ -430,6 +405,32 @@ def page_not_found(e):
 @app.errorhandler(500)
 def internal_server_error(e):
     return jsonify({"error": "Internal server error"}), 500
+
+def crawl_website(start_url, max_pages=50):
+    log_function_call("crawl_website")
+    visited = set()
+    to_visit = [start_url]
+    crawled_content = ""
+    crawled_links = []
+
+    while to_visit and len(visited) < max_pages:
+        current_url = to_visit.pop(0)
+        if current_url in visited:
+            continue
+
+        text_content, links = extract_data_from_webpage(current_url)
+        if text_content:
+            crawled_content += text_content + "\n\n"
+
+        for link in links:
+            if link not in visited and link not in to_visit:
+                to_visit.append(link)
+
+        visited.add(current_url)
+        crawled_links.append(current_url)
+
+    log_function_call("crawl_website", "Completed")
+    return crawled_content, crawled_links
 
 if __name__ == '__main__':
     app.run(host="0.0.0.0", port=5001, debug=True)
