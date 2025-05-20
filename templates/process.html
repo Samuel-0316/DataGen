@@ -393,7 +393,30 @@
         $(document).ready(function() {
             updateStep(1, "completed");
             fetchProcessLogs(); // Initial fetch on page load
-            setInterval(fetchProcessLogs, 1000); // Auto-refresh every second
+            // Only continue polling if not stuck at text extraction
+            let extractionCompleted = false;
+            setInterval(function() {
+                fetchProcessLogs();
+                // Check if we are stuck at text extraction only
+                const terminal = document.getElementById('terminal');
+                if (terminal.innerText.match(/text_extraction - Completed/)) {
+                    extractionCompleted = true;
+                }
+                // If only text extraction is completed and nothing else for 10 seconds, show a message
+                if (extractionCompleted && !terminal.innerText.match(/NLP_processing|sending_chunk_to_LLM/)) {
+                    if (!document.getElementById('stuckMsg')) {
+                        const msg = document.createElement('div');
+                        msg.id = 'stuckMsg';
+                        msg.style.color = 'red';
+                        msg.style.marginTop = '10px';
+                        msg.innerText = 'Processing is stuck at text extraction. Please check your backend logs or try again.';
+                        terminal.parentNode.appendChild(msg);
+                    }
+                } else {
+                    const stuckMsg = document.getElementById('stuckMsg');
+                    if (stuckMsg) stuckMsg.remove();
+                }
+            }, 1000); // Auto-refresh every second
         });
     </script>    
 </body>

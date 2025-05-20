@@ -191,10 +191,6 @@
             }
         }
 
-        function navigateToTerminal() {
-            window.location.href = "/process";  // Redirect to the terminal route
-        }
-
         function showAlert(message, type = 'info') {
             const resultDiv = document.getElementById("result");
             resultDiv.innerHTML = ''; // Clear previous content
@@ -239,8 +235,8 @@
                 return;
             }
 
-            // Show process page immediately after file is selected and upload starts
-            navigateToTerminal();
+            // Show loading spinner
+            resultDiv.innerHTML = '<div class="flex items-center justify-center"><img src="/static/images/loading.gif" alt="Loading..." style="height:40px;"> <span class="ml-2">Processing...</span></div>';
 
             formData.append("file", fileInput.files[0]);  // Ensure "file" matches the expected Flask key
 
@@ -253,6 +249,9 @@
                 const result = await response.json();
                 if (result.error) {
                     showAlert(result.error, "error");
+                } else if (result.stage === "extracted") {
+                    // Redirect to process page as soon as extraction is done
+                    window.location.href = "/process";
                 } else {
                     showAlert("Upload completed successfully!", "info");
                 }
@@ -280,10 +279,11 @@
         async function sendMessage() {
             const userInput = document.getElementById("userInput").value;
             const numberInput = document.getElementById("numberInput").value; // Get number input if needed
+            const resultDiv = document.getElementById("result");
 
             if (userInput) {
-                // Show process page immediately after input is received
-                navigateToTerminal();
+                // Show loading spinner
+                resultDiv.innerHTML = '<div class="flex items-center justify-center"><img src="/static/images/loading.gif" alt="Loading..." style="height:40px;"> <span class="ml-2">Processing...</span></div>';
                 try {
                     const response = await fetch(BACKEND_URL + "/extract_webpage", {
                         method: "POST",
@@ -293,15 +293,16 @@
 
                     const result = await response.json();
                     if (result.error) {
-                        document.getElementById("result").textContent = result.error;
-                    }
-                    else {
+                        resultDiv.textContent = result.error;
+                    } else if (result.stage === "extracted") {
+                        // Redirect to process page as soon as extraction is done
+                        window.location.href = "/process";
+                    } else {
                         showAlert("Data extraction completed successfully!", "info");
-                        console.log(result); // Log the result for debugging
                     }
                 }
                 catch (error) {
-                    document.getElementById("result").textContent = "An error occurred while extracting data.";
+                    resultDiv.textContent = "An error occurred while extracting data.";
                     console.error("Extract error:", error);
                 }
             }
@@ -313,10 +314,11 @@
         async function crawlWebsite() {
             const userInput = document.getElementById("userInput").value;
             const pages = document.getElementById("numberInput").value || 1; // Default to 1 if pages is empty
+            const resultDiv = document.getElementById("result");
 
             if (userInput) {
-                // Show process page immediately after input is received
-                navigateToTerminal();
+                // Show loading spinner
+                resultDiv.innerHTML = '<div class="flex items-center justify-center"><img src="/static/images/loading.gif" alt="Loading..." style="height:40px;"> <span class="ml-2">Processing...</span></div>';
                 try {
                     const response = await fetch(BACKEND_URL + "/crawl_webpage", {
                         method: "POST",
@@ -326,14 +328,15 @@
 
                     const result = await response.json();
                     if (result.error) {
-                        document.getElementById("result").textContent = result.error;
+                        resultDiv.textContent = result.error;
                     }
                     else {
                         showAlert("Crawling completed successfully!", "info");
-                        console.log(result); // Log the result for debugging
+                        // Optionally display result/model_responses here
+                        // resultDiv.textContent = JSON.stringify(result, null, 2);
                     }
                 } catch (error) {
-                    document.getElementById("result").textContent = "An error occurred during website crawling.";
+                    resultDiv.textContent = "An error occurred during website crawling.";
                     console.error("Crawl error:", error);
                 }
             }

@@ -16,6 +16,7 @@ from requests.exceptions import Timeout
 import csv
 from dotenv import load_dotenv
 import os
+import threading
 
 load_dotenv()
 
@@ -194,6 +195,7 @@ def send_chunk_to_LLM(chunk):
 
 @app.route('/upload_file', methods=['POST'])
 def upload_file():
+    global Global_data
     if 'file' not in request.files:
         log_function_call("upload_file", "Error: No file part")
         return jsonify({"error": "No file part"}), 400
@@ -219,29 +221,31 @@ def upload_file():
         log_function_call("upload_file", f"Error in text extraction")
         return jsonify({"error": Global_data}), 500
 
-    log_function_call("NLP_processing", "Started")
-    # Create a TextBlob object
-    blob = TextBlob(Global_data)
-    # Split text into sentences (chunks)
-    sentences = blob.sentences
-    # Define chunk size (number of sentences per chunk)
-    chunk_size = 5
-    # Create chunks by grouping sentences into chunks of specified size
-    chunks = [' '.join(str(sentence) for sentence in sentences[i:i+chunk_size]) for i in range(0, len(sentences), chunk_size)]
-    responses = []
-    log_function_call("NLP_processing", "Completed")
+    # Respond immediately after extraction
+    log_function_call("text_extraction", "Completed")
+    # Start the rest of the pipeline in a background thread
+    threading.Thread(target=process_pipeline_after_extraction, args=(Global_data,)).start()
+    return jsonify({"stage": "extracted", "message": "Text extraction completed. Redirect to process page."}), 200
 
-    log_function_call("sending_chunk_to_LLM", "Started")
-    for i, chunk in enumerate(chunks, start=1):
-        print(f"Chunk {i}: {chunk}")
-        response = send_chunk_to_LLM(chunk)
-        responses.append(response)
-        time.sleep(3)
-    log_function_call("sending_chunk_to_LLM", "Completed")
-
-    log_function_call("Successfully sent all chunks to LLM", "Completed")
-
-    return jsonify({"text": Global_data, "chunks": chunks, "model_responses": responses}), 200
+def process_pipeline_after_extraction(Global_data):
+    try:
+        log_function_call("NLP_processing", "Started")
+        blob = TextBlob(Global_data)
+        sentences = blob.sentences
+        chunk_size = 5
+        chunks = [' '.join(str(sentence) for sentence in sentences[i:i+chunk_size]) for i in range(0, len(sentences), chunk_size)]
+        responses = []
+        log_function_call("NLP_processing", "Completed")
+        log_function_call("sending_chunk_to_LLM", "Started")
+        for i, chunk in enumerate(chunks, start=1):
+            print(f"Chunk {i}: {chunk}")
+            response = send_chunk_to_LLM(chunk)
+            responses.append(response)
+            time.sleep(3)
+        log_function_call("sending_chunk_to_LLM", "Completed")
+        log_function_call("Successfully sent all chunks to LLM", "Completed")
+    except Exception as e:
+        log_function_call("pipeline_error", f"Error: {e}")
 
 # Webpage and Website Crawling Functions
 def extract_data_from_webpage(url):
@@ -300,31 +304,26 @@ def extract_webpage():
     if Global_data is None:
         return jsonify({"error": "Unable to retrieve webpage content"}), 500
     
-    log_function_call("NLP_processing", "Started")
+    log_function_call("text_extraction", "Completed")
+    return jsonify({"stage": "extracted", "message": "Text extraction completed. Redirect to process page."}), 200
 
-    # Create a TextBlob object
-    blob = TextBlob(Global_data)
-    # Split text into sentences (chunks)
-    sentences = blob.sentences
-    # Define chunk size (number of sentences per chunk)
-    chunk_size = 3
-    # Create chunks by grouping sentences into chunks of specified size
-    chunks = [' '.join(str(sentence) for sentence in sentences[i:i+chunk_size]) for i in range(0, len(sentences), chunk_size)]
-    responses = []
-    log_function_call("NLP_processing", "Completed")
-
-    log_function_call("sending_chunk_to_LLM", "Started")
-    for i, chunk in enumerate(chunks, start=1):
-        print(f"Chunk {i}: {chunk}")
-        response = send_chunk_to_LLM(chunk)
-        responses.append(response)
-        time.sleep(3)
-    log_function_call("sending_chunk_to_LLM", "Completed")
-
-    log_function_call("Successfully sent all chunks to LLM", "Completed")
-
-    return jsonify({"text_content": Global_data, "model_responses": responses}), 200
-
+    # The following code will not be reached, but kept for reference
+    # log_function_call("NLP_processing", "Started")
+    # blob = TextBlob(Global_data)
+    # sentences = blob.sentences
+    # chunk_size = 3
+    # chunks = [' '.join(str(sentence) for sentence in sentences[i:i+chunk_size]) for i in range(0, len(sentences), chunk_size)]
+    # responses = []
+    # log_function_call("NLP_processing", "Completed")
+    # log_function_call("sending_chunk_to_LLM", "Started")
+    # for i, chunk in enumerate(chunks, start=1):
+    #     print(f"Chunk {i}: {chunk}")
+    #     response = send_chunk_to_LLM(chunk)
+    #     responses.append(response)
+    #     time.sleep(3)
+    # log_function_call("sending_chunk_to_LLM", "Completed")
+    # log_function_call("Successfully sent all chunks to LLM", "Completed")
+    # return jsonify({"text_content": Global_data, "model_responses": responses}), 200
 @app.route('/crawl_webpage', methods=['POST'])
 def crawl_webpage():
     log_function_call("crawl_webpage", "Started")
