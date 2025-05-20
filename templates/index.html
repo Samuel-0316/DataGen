@@ -101,7 +101,7 @@
                     <span class="absolute inset-0 transform -translate-x-1 -translate-y-1 blur-lg opacity-80 text-indigo-400 neon-shadow"></span>
                 </h4>
 
-                    <form id="pdfForm" action="{{BACKEND_URL}}/upload_file" method="POST" enctype="multipart/form-data" class="animate__animated animate__fadeIn">
+                    <form id="pdfForm" method="POST" enctype="multipart/form-data" class="animate__animated animate__fadeIn">
                         <div class="mb-4 relative group" style="height: 150px;">
                             <input type="file" id="pdfFile" name="pdf" accept=".pdf,.docx,.txt" required
                                 class="block w-full border border-gray-300 rounded-lg p-3 mb-4 transition-all duration-300 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 focus:outline-none opacity-0 absolute inset-0 z-10 cursor-pointer"
@@ -116,7 +116,7 @@
                                 <span id="fileText" class="absolute bottom-3 text-gray-400 text-sm">Drag & drop .pdf file here</span>
                             </label>
                         </div>
-                        <button type="button" target="_blank" onclick="uploadPDF()"
+                        <button type="button" onclick="uploadPDF()"
                             class="btn btn-primary w-full py-2 font-semibold rounded-lg text-white transition-all duration-200 transform hover:scale-105 shadow-md"
                             style="padding: 10px; font-size: 14px; background-color: #245aba; border-color: #245aba;">
                             Upload PDF
@@ -238,19 +238,24 @@
                 showAlert("Please select a file.", "warning");
                 return;
             }
-            else if(fileInput.files.length === 1){
-                navigateToTerminal();
-            }
+
+            // Show process page immediately after file is selected and upload starts
+            navigateToTerminal();
 
             formData.append("file", fileInput.files[0]);  // Ensure "file" matches the expected Flask key
 
             try {
-                const response = await fetch("{{BACKEND_URL}}/upload_file", {
+                const response = await fetch(BACKEND_URL + "/upload_file", {
                     method: "POST",
                     body: formData
                 });
 
                 const result = await response.json();
+                if (result.error) {
+                    showAlert(result.error, "error");
+                } else {
+                    showAlert("Upload completed successfully!", "info");
+                }
             } catch (error) {
                 document.getElementById("result").textContent = "An error occurred during upload.";
                 console.error("Upload error:", error);
@@ -277,8 +282,10 @@
             const numberInput = document.getElementById("numberInput").value; // Get number input if needed
 
             if (userInput) {
+                // Show process page immediately after input is received
+                navigateToTerminal();
                 try {
-                    const response = await fetch("{{BACKEND_URL}}/extract_webpage", {
+                    const response = await fetch(BACKEND_URL + "/extract_webpage", {
                         method: "POST",
                         headers: { "Content-Type": "application/json" },
                         body: JSON.stringify({ url: userInput, pages: numberInput || 1 }) // Default to 1 if numberInput is empty
@@ -289,8 +296,6 @@
                         document.getElementById("result").textContent = result.error;
                     }
                     else {
-                        navigateToTerminal();
-                        // Optionally, you can display a success message or handle the result here
                         showAlert("Data extraction completed successfully!", "info");
                         console.log(result); // Log the result for debugging
                     }
@@ -310,8 +315,10 @@
             const pages = document.getElementById("numberInput").value || 1; // Default to 1 if pages is empty
 
             if (userInput) {
+                // Show process page immediately after input is received
+                navigateToTerminal();
                 try {
-                    const response = await fetch("{{BACKEND_URL}}/crawl_webpage", {
+                    const response = await fetch(BACKEND_URL + "/crawl_webpage", {
                         method: "POST",
                         headers: { "Content-Type": "application/json" },
                         body: JSON.stringify({ url: userInput, max_pages: pages })
@@ -322,8 +329,6 @@
                         document.getElementById("result").textContent = result.error;
                     }
                     else {
-                        navigateToTerminal();
-                        // Optionally, you can display a success message or handle the result here
                         showAlert("Crawling completed successfully!", "info");
                         console.log(result); // Log the result for debugging
                     }
