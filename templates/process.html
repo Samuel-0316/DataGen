@@ -240,6 +240,23 @@
         </div>
     </div>
 
+    <!-- LLM Progress Modal -->
+    <div class="modal fade" id="llmProgressModal" tabindex="-1" aria-labelledby="llmProgressModalLabel" aria-hidden="true">
+      <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title" id="llmProgressModalLabel">Sending Chunks to LLM</h5>
+          </div>
+          <div class="modal-body">
+            <div class="progress" style="height: 30px;">
+              <div id="llmProgressBar" class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" style="width: 0%; font-size: 18px;">0%</div>
+            </div>
+            <div id="llmProgressText" class="mt-3 text-center" style="font-size: 16px;"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <script>
         function downloadCSV() {
             const terminal = document.getElementById('terminal'); // Terminal element to log status updates
@@ -390,6 +407,44 @@
             });
         }
     
+        let llmProgressInterval = null;
+
+        function showLLMProgressModal() {
+            const modal = new bootstrap.Modal(document.getElementById('llmProgressModal'), {backdrop: 'static', keyboard: false});
+            modal.show();
+        }
+
+        function hideLLMProgressModal() {
+            const modalEl = document.getElementById('llmProgressModal');
+            const modal = bootstrap.Modal.getInstance(modalEl);
+            if (modal) modal.hide();
+            // Remove any leftover Bootstrap modal backdrop and modal-open class
+            setTimeout(function() {
+                $(".modal-backdrop").remove();
+                $("body").removeClass("modal-open");
+                $("body").css("padding-right", "");
+            }, 500); // Wait for modal to finish hiding
+        }
+
+        function pollLLMProgress() {
+            $.get('/get_llm_progress', function(progress) {
+                if (progress.total > 0 && progress.status === 'running') {
+                    showLLMProgressModal();
+                    const percent = Math.round((progress.current / progress.total) * 100);
+                    $("#llmProgressBar").css('width', percent + '%').text(percent + '%');
+                    $("#llmProgressText").text(`Chunk ${progress.current} of ${progress.total}`);
+                } else if (progress.status === 'done' || progress.status === 'error') {
+                    $("#llmProgressBar").css('width', '100%').text('100%');
+                    $("#llmProgressText").text(progress.status === 'done' ? 'All chunks sent!' : 'Error during LLM processing.');
+                    setTimeout(hideLLMProgressModal, 1200);
+                    clearInterval(llmProgressInterval);
+                } else {
+                    // Hide if not running
+                    hideLLMProgressModal();
+                }
+            });
+        }
+
         $(document).ready(function() {
             updateStep(1, "completed");
             fetchProcessLogs(); // Initial fetch on page load
@@ -417,6 +472,37 @@
                     if (stuckMsg) stuckMsg.remove();
                 }
             }, 1000); // Auto-refresh every second
+
+            llmProgressInterval = setInterval(pollLLMProgress, 1000);
+
+            // Navigation and process abort logic
+            let processActive = true;
+            function abortProcessAndGoHome() {
+                if (!processActive) {
+                    window.location.href = '/';
+                    return;
+                }
+                if (confirm('Progress will be lost. Are you sure you want to leave this page?')) {
+                    // Notify backend to abort process
+                    fetch('/abort_process', {method: 'POST'})
+                        .then(() => {
+                            processActive = false;
+                            window.location.href = '/';
+                        });
+                }
+            }
+            // Warn if user tries to close or reload the page
+            window.addEventListener('beforeunload', function (e) {
+                if (processActive) {
+                    e.preventDefault();
+                    e.returnValue = 'Progress will be lost. Are you sure you want to leave?';
+                }
+            });
+            // Add Home navigation event
+            $(".navbar-brand, .nav-link:contains('Home')").on('click', function(e) {
+                e.preventDefault();
+                abortProcessAndGoHome();
+            });
         });
     </script>    
 </body>
