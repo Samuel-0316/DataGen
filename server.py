@@ -122,33 +122,25 @@ def generate_response(prompt, max_tokens, max_retries=5, backoff_factor=2):
     attempt = 0
     while attempt < max_retries:
         try:
-            # Start timing the request
             start_time = time.time()
-            
-            # Call the Cohere API
-            response = co.generate(
-                model="command-r-plus",
-                prompt=prompt,
-                max_tokens=max_tokens,
+            # Use Cohere Chat API instead of generate
+            response = co.chat(
+                model="command-a-03-2025",  # Updated to latest supported model
+                message=prompt,
                 temperature=0.7,
+                max_tokens=max_tokens,
             )
-            
-            # Check if response was received in under 10 seconds
             elapsed_time = time.time() - start_time
             if elapsed_time > 10:
                 raise TimeoutError("Response exceeded 10 seconds.")
-            
-            return response.generations[0].text.strip()
-
+            # The chat API returns response.text
+            return response.text.strip()
         except TimeoutError as e:
             print(f"Timeout occurred: {e}. Retrying {attempt + 1}/{max_retries}...")
         except Exception as e:
             print(f"Error: {e}. Retrying {attempt + 1}/{max_retries}...")
-
-        # Exponential backoff for retries
         attempt += 1
         time.sleep(backoff_factor ** attempt)
-
     print("Max retries reached. Could not get a response in time.")
     return None
 
@@ -370,7 +362,12 @@ def generate_csv_from_qa_pairs(qa_pairs):
             writer = csv.DictWriter(csv_file, fieldnames=fieldnames)
             writer.writeheader()
             for pair in qa_pairs:
-                writer.writerow({'question': pair['question'], 'answer': pair['answer']})
+                # Only write rows with both 'question' and 'answer' keys
+                if isinstance(pair, dict) and 'question' in pair and 'answer' in pair:
+                    writer.writerow({'question': pair['question'], 'answer': pair['answer']})
+                else:
+                    # Optionally log or skip malformed pairs
+                    log_function_call("generate_csv_from_qa_pairs", f"Skipped malformed pair: {pair}")
         return csv_filename
     except Exception as e:
         log_function_call("generate_csv_from_qa_pairs", f"Error: {e}")
